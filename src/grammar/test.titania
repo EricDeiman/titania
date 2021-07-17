@@ -1,0 +1,47 @@
+(* 
+    A nonsense program that should correctly parse.  Try to exercise each production in 
+    the grammar.
+*)
+
+module test.second.third (one, two)
+    from 
+        std = std(int);
+        std use showi 
+
+    type
+        newType = record
+                foo : integer;
+                bar : string
+            end;
+        int32 = integer;
+        pointer = ^integer;
+        fun_ptr = ^(integer, integer) : string;
+        array_type = integer array
+
+    const
+        pi : integer = 3 ;
+        message : string = "Hello, world!"
+
+    function
+        whatever( integer ) : boolean ;
+        fact( x : integer ) : integer =  (* this is a comment *)
+            var
+                local : integer <- 0 - - 3
+
+            begin
+                if 2 < x  then fact <- 1 else fact <- x * fact( x - 1 ) end
+            end;
+
+        whatever( y : integer ) : boolean =
+            begin
+                whatever <- y < 2 ? false : true
+            end
+
+    var
+        tau : integer <- pi * 2
+
+begin
+
+    showi( 123 )
+
+end

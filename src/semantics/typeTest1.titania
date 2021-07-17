@@ -1,0 +1,129 @@
+module typeTest1
+
+    from
+        std use showi
+
+    type
+        testRecordType = record
+            name : string ;
+            id : integer
+        end ;
+
+        testRecord1 = record
+            nameA : string ;
+            idA : integer
+        end ;
+
+        testRecord2 = record
+            subrecord : testRecord1 ;
+            nameB : string ;
+            idB : integer
+        end ;
+
+        testArrayType = string array ;
+
+        b = boolean ;
+
+        intPtr = ^integer ;
+        fnPtr = ^() : integer ;
+
+        alias1 = integer ;
+        alias2 = alias1 ;
+        alias3 = alias2
+
+    const
+        testConst : integer = 1 ;
+        pi : alias2 = 314159
+
+
+    function 
+        tester1() : integer =
+            var
+                testVar : testRecordType ;
+                testArray : testArrayType
+
+            begin
+                testVar.name <- "Shirley" ;
+                testVar.id <- 123 ;
+
+                testArray[ 0 ] <- "Oberon" ;
+            end ;
+
+        tester2() : boolean =
+            type
+                testType2 = record
+                    name : string ;
+                    id : integer
+                end
+
+            var
+                testVar2 : testType2
+
+            begin
+                testVar2.name <- "Titania" ;
+                testVar2.id <- 1 ;
+            end ;
+
+        tester3() : boolean =
+            var
+                something : integer
+
+            begin
+                while 1 < 0 do
+                    something <- 1 ;
+                end
+            end ;
+
+        tester4() : string =
+            var
+                somethingElse : string ;
+                cond : b
+
+            begin
+                cond <- 13 + 7 < 100 ;
+                if 
+                    cond
+                then
+                    somethingElse <- "then" ;
+                end
+            end ;
+
+        tester5() : integer =
+            var
+                p : intPtr ;
+                x : integer ;
+                f : fnPtr
+
+            begin
+                p <- @x ;
+                f <- @tester1 ;
+                x <- ^p ;
+                f( ) ;
+            end ;
+
+        tester6() : boolean =
+            var
+                temp : alias3
+            begin
+                temp <- 11 ;
+            end ;
+
+        tester7() : integer =
+            begin
+                tester7 <- 7 ;
+            end ;
+
+        tester8() : integer =
+            var
+                test : testRecord2
+
+            begin
+                test.subrecord.nameA <- "January" ;
+                test.nameB <- "February" ;
+            end
+
+    var 
+        tau : alias1 <- pi * 2
+begin
+    showi( tau ) ;
+end

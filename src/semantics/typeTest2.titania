@@ -1,0 +1,43 @@
+(*
+    This file is intended to generate error messages about invalid expressions.
+*)
+
+module typeTest2
+
+    type
+        integer = integer ;
+        record1 = record
+            name1 : string ;
+            value1 : integer
+        end ;
+        record2 = record
+            sub : record1 ;
+            name2 : string ;
+            value2 : integer
+        end
+
+    const
+        integer : integer = 1 ;
+
+    function
+        tester1( string : integer ) : integer =
+            begin
+                "nothing"
+            end ;
+
+        tester2( some : integer ) : integer =
+            begin
+                tester1 <- 11
+            end ;
+
+        tester3( ) : boolean =
+            var
+                value : record2
+
+            begin
+                value.sub.name1 <- 11 ;
+                value.value2 <- "Thursday"
+            end
+
+
+end

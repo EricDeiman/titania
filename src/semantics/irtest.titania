@@ -1,0 +1,38 @@
+module irtest
+    from
+        std use showi
+
+    type
+        b = boolean
+
+    const
+        c : integer = 2
+
+    var
+        x : integer ;
+        y : integer ;
+        bool : b ;
+        cool : b 
+
+begin
+    x <- c ;
+    x <- c * 3 ;
+    x <- c * 3 + 11 ;
+    x <- c * (3 + 11) ;
+    x <- c - -17 ;
+    y <- showi( x ) ;
+    bool <- x < y ;
+    cool <- false ;
+    cool <- cool or false ;
+    cool <- true and cool ;
+    if bool 
+    then 
+        x <- 1 + 2 + 3 ;
+    else 
+        x <- 1 + 2 + 3 ;
+    end
+    while x < 8 do
+        showi( x ) ;
+        x <- x + 1 ;
+    end 
+end

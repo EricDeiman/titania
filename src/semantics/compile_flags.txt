@@ -1,0 +1,6 @@
+-I/home/eric/projects/ProcLang/code-name-titania/src/include/antlr4-runtime
+-I/home/eric/projects/Proclang/cdoe-name-titania/src/include
+-I/home/eric/projects/Proclang/code-name-titania/src/semantics
+-isystem/usr/include/c++/10
+-isystem/usr/include/x86_64-linux-gnu/c++/10
+-std=c++17

@@ -1,0 +1,8 @@
+module std
+
+    function
+        showi( integer ) : integer ;
+        showb( boolean ) : integer ;
+        shows( string ) : integer
+
+end

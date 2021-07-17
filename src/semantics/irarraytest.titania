@@ -1,0 +1,16 @@
+module irarraytest
+
+    from
+        std use showi
+
+    type
+        arrayOfInt = integer array 
+
+    var
+        testArray : arrayOfInt ;
+        x : integer 
+
+begin
+    x <- testArray[ 3 ] ;
+
+end
