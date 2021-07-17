@@ -430,28 +430,24 @@ elaborationVisitor::visitIfThen( titaniaParser::IfThenContext *ctx ) {
 
     writeCodeBuffer( { thenPart, ":" } );
 
-    scopes.push_back( symbolTables[ ctx ] );
     std::unordered_map< std::string, std::string > valuesMap;
     valuesScopes.push_back( valuesMap );
 
     visit( ctx->thenBody );
 
     valuesScopes.pop_back();
-    scopes.pop_back();
 
     writeCodeBuffer( { "jumpI ", endIf } );
 
     if( hasElseBody ) {
         writeCodeBuffer( { elsePart, ":" } );
 
-        scopes.push_back( symbolTables[ ctx + 1 ] );
         std::unordered_map< std::string, std::string > valuesMap;
         valuesScopes.push_back( valuesMap );
 
         visit( ctx->elseBody );
 
         valuesScopes.pop_back();
-        scopes.pop_back();
 
         writeCodeBuffer( { "jumpI ", endIf } );
     }
@@ -483,7 +479,6 @@ elaborationVisitor::visitWhileDo( titaniaParser::WhileDoContext *ctx ) {
     writeCodeBuffer( { "cbr_neq ", cc1, " -> ", whileBody, ", ", whileEnd } ); 
     writeCodeBuffer( { whileBody, ":" } );
 
-    scopes.push_back( symbolTables[ ctx ] );
     std::unordered_map< std::string, std::string > valuesMap;
     valuesScopes.push_back( valuesMap );
     memoizeExprs = true;
@@ -492,7 +487,6 @@ elaborationVisitor::visitWhileDo( titaniaParser::WhileDoContext *ctx ) {
 
     memoizeExprs = false;
     valuesScopes.pop_back();
-    scopes.pop_back();
 
     auto test2 = static_cast< std::string >( visit( ctx->test ) );
     auto cc2 = getFreshCCRegister();
