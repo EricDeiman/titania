@@ -345,7 +345,12 @@ elaborationVisitor::visitArrayAccess( titaniaParser::ArrayAccessContext *ctx ) {
     writeCodeBuffer( { "# ---------------- Array access on line ", 
         std::to_string( ctx->getStart()->getLine() ) } );
 
+    auto oldAsLValue = asLvalue;
+    asLvalue = true;
     auto base = static_cast< std::string >( visit( ctx->base ) );
+    asLvalue = oldAsLValue;
+
+
     auto index = static_cast< std::string >( visit( ctx->index ) );
     auto result = getFreshRegister();
 
