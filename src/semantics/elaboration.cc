@@ -342,19 +342,54 @@ elaborationVisitor::visitBoolLit( titaniaParser::BoolLitContext* ctx ) {
 
 Any
 elaborationVisitor::visitArrayAccess( titaniaParser::ArrayAccessContext *ctx ) {
+    writeCodeBuffer( { "# ---------------- Array access on line ", 
+        std::to_string( ctx->getStart()->getLine() ) } );
 
     auto base = static_cast< std::string >( visit( ctx->base ) );
     auto index = static_cast< std::string >( visit( ctx->index ) );
     auto result = getFreshRegister();
-    auto symbolTable = symbolTables[ ctx ];
+
+    auto symbols = symbolTables[ ctx ];
+    auto arrayBaseType = symbols[ "arrayBaseType" ];
+    if( arrayBaseType.base != "integer" ) {
+        std::cerr << "Can only support arrays of integers (not " << 
+            arrayBaseType.base << ") on line " << ctx->getStart()->getLine() << 
+        std::endl;
+        exit( -1 );
+    }
 
     // base is a register that holds the offset in the ARP of the base of the array
     writeCodeBuffer( { "# ---------------- base is ", base, " and index is ", index } );
 
-    // index is a register that holds an integer indicating the offse into the array to 
-    // look
+    // index is a register that holds an integer indicating the offset into the array to 
+    // look.  the actual offset will be the size of the elements of the array times the index
+    auto sizeOf = std::to_string( arrayBaseType.sizeInBytes );
+    std::string r_sizeOf;
+    if( memoizeExprs && valuesScopesCount( sizeOf ) > 0 ) {
+        r_sizeOf = valuesScopesLookup( sizeOf );
+    }
+    else {
+        r_sizeOf = getFreshRegister();
+        writeCodeBuffer( { "loadi ", sizeOf, " => ", r_sizeOf } );
+        if( memoizeExprs ) {
+            valuesScopes.back()[ sizeOf ] = r_sizeOf;
+        }
+    }
 
-    // the actual offset will be the size of the elements of the array times the index
+    std::string r_offset;
+    auto key = index + "mult " + r_sizeOf;
+    if( memoizeExprs && valuesScopesCount( key ) ) {
+        r_offset = valuesScopesLookup( key );
+    }
+    else {
+        r_offset = getFreshRegister();
+        writeCodeBuffer( { "mult ", index, ", ", r_sizeOf, " => ", r_offset } );
+        if( memoizeExprs ) {
+            valuesScopes.back()[ key ] = r_offset;
+        }
+    }
+
+    writeCodeBuffer( { "loadao ", base, ", ", r_offset, " => ", result } );
 
     return result;
 }

@@ -48,6 +48,8 @@ public:
 
     bool constFlag;
 
+    size_t sizeInBytes;
+
     std::ostream &
     dump( std::ostream & );
 };
