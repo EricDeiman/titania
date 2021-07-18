@@ -121,7 +121,9 @@ private:
 
 
     int registerNum = 0;
-    bool asLvalue = false;
+
+    // look up an ID and return the address of it, rather than the value of it
+    bool asAddress = false;
 
     int ccNum = 0;
     int labelSuffix = 0;

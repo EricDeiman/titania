@@ -158,7 +158,7 @@ typeVisitor::visitTypeRecord( titaniaParser::TypeRecordContext* ctx ) {
     std::pair< std::string, Symbol > recordType;
     recordType.second.type = symbolType::record;
 
-    recordType.first = recordType.second.name = recordType.first = ctx->typeName->getText();
+    recordType.first = recordType.second.name = ctx->typeName->getText();
 
     if( validateId( recordType.first, 
             "cannot use symbol {name} to identify a record type", 
@@ -180,6 +180,7 @@ typeVisitor::visitTypeRecord( titaniaParser::TypeRecordContext* ctx ) {
                         "invalid type ({name}) for record field", 
                         sourceLine( ctx ) ) ) {
 
+                    recordType.second.sizeInBytes += field.sizeInBytes;
                     recordType.second.fields.push_back( std::move( field ) );
                 }
             }

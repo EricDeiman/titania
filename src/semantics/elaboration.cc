@@ -34,7 +34,7 @@ elaborationVisitor::visitIdentifier( titaniaParser::IdentifierContext *ctx ) {
         valuesScopes.back()[ "@"+ id ] = reg1;
     }
 
-    if( asLvalue ) {
+    if( asAddress ) {
         result = reg1;
     }
     else {
@@ -345,14 +345,13 @@ elaborationVisitor::visitArrayAccess( titaniaParser::ArrayAccessContext *ctx ) {
     writeCodeBuffer( { "# ---------------- Array access on line ", 
         std::to_string( ctx->getStart()->getLine() ) } );
 
-    auto oldAsLValue = asLvalue;
-    asLvalue = true;
+    auto oldAsAddress = asAddress;
+    asAddress = true;
     auto base = static_cast< std::string >( visit( ctx->base ) );
-    asLvalue = oldAsLValue;
+    asAddress = oldAsAddress;
 
 
     auto index = static_cast< std::string >( visit( ctx->index ) );
-    auto result = getFreshRegister();
 
     auto symbols = symbolTables[ ctx ];
     auto arrayBaseType = symbols[ "arrayBaseType" ];
@@ -375,7 +374,8 @@ elaborationVisitor::visitArrayAccess( titaniaParser::ArrayAccessContext *ctx ) {
     }
     else {
         r_sizeOf = getFreshRegister();
-        writeCodeBuffer( { "loadi ", sizeOf, " => ", r_sizeOf } );
+        writeCodeBuffer( { "loadi ", sizeOf, " => ", r_sizeOf,
+            "  # size of array element (", arrayBaseType.base, ")" } );
         if( memoizeExprs ) {
             valuesScopes.back()[ sizeOf ] = r_sizeOf;
         }
@@ -388,13 +388,25 @@ elaborationVisitor::visitArrayAccess( titaniaParser::ArrayAccessContext *ctx ) {
     }
     else {
         r_offset = getFreshRegister();
-        writeCodeBuffer( { "mult ", index, ", ", r_sizeOf, " => ", r_offset } );
+        writeCodeBuffer( { "mult ", index, ", ", r_sizeOf, " => ", r_offset,
+            "  # offset into array of indexed element" } );
         if( memoizeExprs ) {
             valuesScopes.back()[ key ] = r_offset;
         }
     }
 
-    writeCodeBuffer( { "loadao ", base, ", ", r_offset, " => ", result } );
+    auto arrayOffset = getFreshRegister();
+    writeCodeBuffer( { "add ", base, ", ", r_offset, " => ", arrayOffset } );
+
+    std::string result;
+
+    if( asAddress ) {
+        result = arrayOffset;
+    }
+    else {
+        result = getFreshRegister();
+        writeCodeBuffer( { "loadao rarp, ", arrayOffset, " => ", result } );
+    }
 
     return result;
 }
@@ -409,9 +421,10 @@ elaborationVisitor::visitAssignment( titaniaParser::AssignmentContext* ctx ) {
 
     auto rvalue = static_cast< std::string >( visit( ctx->rval ) );
 
-    asLvalue = true;
+    auto oldAsAddress = asAddress;
+    asAddress = true;
     auto lvalue = static_cast< std::string >( visit( ctx->lval ) );
-    asLvalue = false;
+    asAddress = oldAsAddress;
 
     writeCodeBuffer( { "storeao ", rvalue, " => rarp, ", lvalue } );
 

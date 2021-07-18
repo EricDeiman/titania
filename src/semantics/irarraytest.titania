@@ -4,13 +4,24 @@ module irarraytest
         std use showi
 
     type
-        arrayOfInt = integer array 
+        arrayOfInt = integer array ;
+
+        threeInts = record
+            one : integer ;
+            two : integer ;
+            three : integer
+        end ;
 
     var
-        testArray : arrayOfInt ;
-        x : integer 
+        testIntArray : arrayOfInt ;
+        x : integer ;
+        test3Ints : threeInts
 
 begin
-    x <- testArray[ 3 ] ;
+    x <- testIntArray[ 3 ] ;
+    testIntArray[ 5 ] <- 42 ;
+
+    x <- test3Ints.one ;
+    test3Ints.two <- 2 ;
 
 end
