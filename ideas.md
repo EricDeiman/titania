@@ -115,4 +115,4 @@ To build an executable program, run:
     [x] the ir generator doesn't look at #ArrayAccess as LHS
     [] the ir generator doesn't look at #TakeReference
     [] the ir generator doesn't look at #ArithmaticIf
-    [] array decls should have a size component
+    [x] array decls should have a size component

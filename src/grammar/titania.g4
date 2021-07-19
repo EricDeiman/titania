@@ -22,7 +22,7 @@ typeElem : typeName=ID '=' 'record' idDecl ( ';' idDecl )* 'end'   #TypeRecord /
          | typeName=ID '=' '^' base=ID  #TypePointer // pointer type
            // pointer to function
          | typeName=ID '=' '^' '(' ( params+=ID ( ',' params+=ID )* )? ')' ':' base=ID #TypeFunctionPointer  
-         | typeName=ID '=' base=ID 'array' #TypeArray // array
+         | typeName=ID '=' base=ID length=NUMBER 'array' #TypeArray // array
          ;
 idDecl : name=ID ':' type=ID ;
     

@@ -1,5 +1,6 @@
 
 #include "type.hh"
+#include <cstddef>
 #include <string>
 
 // --------------------------------------------------------------------------------------
@@ -169,6 +170,7 @@ typeVisitor::visitTypeRecord( titaniaParser::TypeRecordContext* ctx ) {
 
         for(auto i : ctx->idDecl() ) {
             field.name = i->name->getText();
+            int offset = 0;
 
             if( validateId( field.name,
                      "cannot use symbol {name} to identify a field",
@@ -180,8 +182,13 @@ typeVisitor::visitTypeRecord( titaniaParser::TypeRecordContext* ctx ) {
                         "invalid type ({name}) for record field", 
                         sourceLine( ctx ) ) ) {
 
-                    recordType.second.sizeInBytes += field.sizeInBytes;
+                    auto baseType = resolveType( field.base );
+                    recordType.second.sizeInBytes += baseType.sizeInBytes;
+                    field.fieldOffset = offset;
+                    field.sizeInBytes = baseType.sizeInBytes;
+                    offset += field.sizeInBytes;
                     recordType.second.fields.push_back( std::move( field ) );
+
                 }
             }
         }
@@ -283,6 +290,7 @@ typeVisitor::visitTypeArray( titaniaParser::TypeArrayContext* ctx ) {
     arrayType.second.type = symbolType::array;
 
     arrayType.second.name = arrayType.first = ctx->typeName->getText();
+    arrayType.second.arrayLength = txNumber( ctx->length->getText() );
 
     if( validateId( arrayType.first,
             "cannot use symbol {name} to identify array type",
@@ -1198,3 +1206,15 @@ typeVisitor::mkLabel( std::string prefix ) {
     return prefix + std::to_string( nameSuffix++ );
 }
 
+size_t
+typeVisitor::txNumber( std::string number ) {
+    std::string buffer;
+
+    for( auto c : number ) {
+        if( c != '_' ) {
+            buffer += c;
+        }
+    }
+
+    return std::stoi( buffer );
+}

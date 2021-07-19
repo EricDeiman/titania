@@ -1,6 +1,7 @@
 #ifndef TYPE_HH
 #define TYPE_HH
 
+#include <cstddef>
 #include <iostream>
 #include <ostream>
 #include <stack>
@@ -48,7 +49,14 @@ public:
 
     bool constFlag;
 
+    // size of this type
     size_t sizeInBytes;
+
+    // for arrays; how many elements
+    size_t arrayLength;
+
+    // for fields; the offset from the front of the record to this field.
+    size_t fieldOffset;
 
     std::ostream &
     dump( std::ostream & );
@@ -225,6 +233,9 @@ private:
 
     std::string
     mkLabel( std::string );
+
+    size_t
+    txNumber( std::string );
 
     std::vector<SymbolTable> scopes;
     std::unordered_map< antlr4::ParserRuleContext*, SymbolTable > symbolTables;

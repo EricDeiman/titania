@@ -20,7 +20,7 @@ module typeTest1
             idB : integer
         end ;
 
-        testArrayType = string array ;
+        testArrayType = string 42 array ;
 
         b = boolean ;
 

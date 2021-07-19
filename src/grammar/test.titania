@@ -16,7 +16,7 @@ module test.second.third (one, two)
         int32 = integer;
         pointer = ^integer;
         fun_ptr = ^(integer, integer) : string;
-        array_type = integer array
+        array_type = integer 10 array
 
     const
         pi : integer = 3 ;

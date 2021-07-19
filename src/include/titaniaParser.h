@@ -1,5 +1,5 @@
 
-// Generated from titania.g4 by ANTLR 4.7.1
+// Generated from titania.g4 by ANTLR 4.7
 
 #pragma once
 
@@ -179,8 +179,10 @@ public:
 
     antlr4::Token *typeName = nullptr;
     antlr4::Token *base = nullptr;
+    antlr4::Token *length = nullptr;
     std::vector<antlr4::tree::TerminalNode *> ID();
     antlr4::tree::TerminalNode* ID(size_t i);
+    antlr4::tree::TerminalNode *NUMBER();
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
   };
 
