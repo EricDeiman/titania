@@ -168,9 +168,9 @@ typeVisitor::visitTypeRecord( titaniaParser::TypeRecordContext* ctx ) {
         Symbol field;
         field.type = symbolType::variable;
 
+        int offset = 0;
         for(auto i : ctx->idDecl() ) {
             field.name = i->name->getText();
-            int offset = 0;
 
             if( validateId( field.name,
                      "cannot use symbol {name} to identify a field",
@@ -188,7 +188,6 @@ typeVisitor::visitTypeRecord( titaniaParser::TypeRecordContext* ctx ) {
                     field.sizeInBytes = baseType.sizeInBytes;
                     offset += field.sizeInBytes;
                     recordType.second.fields.push_back( std::move( field ) );
-
                 }
             }
         }
@@ -602,12 +601,13 @@ typeVisitor::visitFieldAccess( titaniaParser::FieldAccessContext* ctx ) {
     auto baseExpr = static_cast< Symbol >( visit( ctx->base ) );
     auto fieldName = ctx->field->getText();
 
-    Symbol result;
+    Symbol result, record;
 
     if( baseExpr.type == symbolType::variable ) {
         Symbol baseExprType = lookUp( baseExpr.base ).second;
         baseExprType.constFlag = baseExpr.constFlag;
         if( baseExprType.type == symbolType::record ) {
+            record = baseExprType;
             result = lookUpField( baseExprType, fieldName, baseExprType.constFlag );
         }
         else {
@@ -618,6 +618,7 @@ typeVisitor::visitFieldAccess( titaniaParser::FieldAccessContext* ctx ) {
         }
     }
     else if( baseExpr.type == symbolType::record ) {
+        record = baseExpr;
         result = lookUpField( baseExpr, fieldName, baseExpr.constFlag );
     }
     else {
@@ -625,6 +626,10 @@ typeVisitor::visitFieldAccess( titaniaParser::FieldAccessContext* ctx ) {
             baseExpr.name << " on line " << sourceLine( ctx ) << std::endl;
         errors++;
     }
+
+    SymbolTable recordFieldSymbols;
+    recordFieldSymbols[ "recordField" ] = record;
+    symbolTables[ ctx ] = std::move( recordFieldSymbols );
 
     return result;
 }

@@ -71,6 +71,9 @@ public:
     visitArrayAccess( titaniaParser::ArrayAccessContext * ) override;
 
     Any
+    visitFieldAccess(titaniaParser::FieldAccessContext * ) override;
+
+    Any
     visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* ) override;
 
     Any

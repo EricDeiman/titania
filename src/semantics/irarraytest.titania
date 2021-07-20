@@ -4,7 +4,7 @@ module irarraytest
         std use showi
 
     type
-        arrayOfInt = integer array ;
+        arrayOfInt = integer 20 array ;
 
         threeInts = record
             one : integer ;
@@ -12,16 +12,24 @@ module irarraytest
             three : integer
         end ;
 
+        arrayOf3Ints = threeInts 10 array ;
+
     var
         testIntArray : arrayOfInt ;
         x : integer ;
-        test3Ints : threeInts
+        test3Ints : threeInts ;
+        threeIntsArray : arrayOf3Ints ;
 
 begin
-    x <- testIntArray[ 3 ] ;
+(*    x <- testIntArray[ 3 ] ;
     testIntArray[ 5 ] <- 42 ;
+*)
+(*    x <- test3Ints.two ;
+    test3Ints.three <- 2 ;
+*)
 
-    x <- test3Ints.one ;
-    test3Ints.two <- 2 ;
+    x <- threeIntsArray[ 4 ].three ;
+    threeIntsArray[ 5 ].two <- 42 ;
+
 
 end

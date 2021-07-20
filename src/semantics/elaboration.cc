@@ -341,6 +341,63 @@ elaborationVisitor::visitBoolLit( titaniaParser::BoolLitContext* ctx ) {
 }
 
 Any
+elaborationVisitor::visitFieldAccess(titaniaParser::FieldAccessContext *ctx ) {
+    writeCodeBuffer( { "# ---------------- Field access on line ", 
+        std::to_string( ctx->getStart()->getLine() ) } );
+
+    auto oldAsAddress = asAddress;
+    asAddress = true;
+    auto base = static_cast< std::string >( visit( ctx->base ) );
+    asAddress = oldAsAddress;
+
+    auto symbols = symbolTables[ ctx ];
+    auto record = symbols[ "recordField" ];
+    auto fieldName = ctx->field->getText();
+    Symbol field;
+
+    for( auto f : record.fields ) {
+        if( f.name == fieldName ) {
+            field = f;
+        }
+    }
+
+    writeCodeBuffer( {  "# ................... looking up field ", fieldName, 
+        " in record ", record.name, " with offset of ", std::to_string( field.fieldOffset ), 
+        " and size ", std::to_string( field.sizeInBytes ) } );
+
+    auto offset = std::to_string( field.fieldOffset );
+    std::string r_offset;
+    if( memoizeExprs && valuesScopesCount( offset ) > 0 ) {
+        r_offset = valuesScopesLookup( offset );
+    }
+    else {
+        r_offset = getFreshRegister();
+        writeCodeBuffer( { "loadi ", offset, " => ", r_offset,
+            "  # offset of field ", fieldName } );
+        if( memoizeExprs ) {
+            valuesScopes.back()[ offset ] = r_offset;
+        }
+    }
+
+    auto fieldOffsetFromRarp = getFreshRegister();
+    writeCodeBuffer( { "add ", base, ", ", r_offset, " => ", fieldOffsetFromRarp } );
+
+    std::string result;
+
+
+    if( asAddress ) {
+        result = fieldOffsetFromRarp;
+    }
+    else {
+        result = getFreshRegister();
+        writeCodeBuffer( { "loadao rarp, ", fieldOffsetFromRarp, " => ", result } );
+    }
+
+
+    return result;
+}
+
+Any
 elaborationVisitor::visitArrayAccess( titaniaParser::ArrayAccessContext *ctx ) {
     writeCodeBuffer( { "# ---------------- Array access on line ", 
         std::to_string( ctx->getStart()->getLine() ) } );
@@ -350,17 +407,10 @@ elaborationVisitor::visitArrayAccess( titaniaParser::ArrayAccessContext *ctx ) {
     auto base = static_cast< std::string >( visit( ctx->base ) );
     asAddress = oldAsAddress;
 
-
     auto index = static_cast< std::string >( visit( ctx->index ) );
 
     auto symbols = symbolTables[ ctx ];
     auto arrayBaseType = symbols[ "arrayBaseType" ];
-    if( arrayBaseType.base != "integer" ) {
-        std::cerr << "Can only support arrays of integers (not " << 
-            arrayBaseType.base << ") on line " << ctx->getStart()->getLine() << 
-        std::endl;
-        exit( -1 );
-    }
 
     // base is a register that holds the offset in the ARP of the base of the array
     writeCodeBuffer( { "# ---------------- base is ", base, " and index is ", index } );

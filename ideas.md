@@ -110,7 +110,7 @@ To build an executable program, run:
     [x] the type checker dosen't check the then body of if/then/else
     [x] the type checker doesn't check the else body (if there is one) of if/then/else
     [] the ir generator doesn't look at #ExprStmnt
-    [] the ir generator doesn't look at #FieldAccess
+    [x] the ir generator doesn't look at #FieldAccess
     [x] the ir generator doesn't look at #ArrayAccess as RHS
     [x] the ir generator doesn't look at #ArrayAccess as LHS
     [] the ir generator doesn't look at #TakeReference
