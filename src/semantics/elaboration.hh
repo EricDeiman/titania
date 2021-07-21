@@ -73,6 +73,9 @@ public:
     Any
     visitFieldAccess(titaniaParser::FieldAccessContext * ) override;
 
+    Any 
+    visitArithmaticIf( titaniaParser::ArithmaticIfContext * ) override;
+
     Any
     visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* ) override;
 

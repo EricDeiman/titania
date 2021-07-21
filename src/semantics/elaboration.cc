@@ -340,6 +340,46 @@ elaborationVisitor::visitBoolLit( titaniaParser::BoolLitContext* ctx ) {
     return result;
 }
 
+Any 
+elaborationVisitor::visitArithmaticIf( titaniaParser::ArithmaticIfContext *ctx ) {
+
+    writeCodeBuffer( { "# ................ arithmatic if on line ", 
+        std::to_string( ctx->getStart()->getLine() ) } );
+
+    auto test = static_cast< std::string >( visit( ctx->test ) );
+
+    auto r_false = valuesScopesLookup( "false" );
+    auto labels = makeLabel( { "consqExpr", "altrnExpr", "endAIf" } );
+    auto consqPart = labels[ 0 ];
+    auto altrnPart = labels[ 1 ];
+    auto endAIf = labels[ 2 ];
+    auto result = getFreshRegister();
+
+    auto cc = getFreshCCRegister();
+
+    writeCodeBuffer( { "comp ", test, ", ",  r_false, " => ", cc } );
+    writeCodeBuffer( { "cbr_neq ", cc, " -> ", consqPart, ", ", altrnPart } );
+
+    writeCodeBuffer( { consqPart, ":" } );
+
+    auto consqReg = static_cast< std::string >( visit( ctx->consq ) );
+    writeCodeBuffer( { "i2i ", consqReg, " => ", result } );
+
+    writeCodeBuffer( { "jumpI ", endAIf } );
+
+    writeCodeBuffer( { altrnPart, ":" } );
+
+    auto altrnReg = static_cast< std::string >( visit( ctx->altrn ) );
+    writeCodeBuffer( { "i2i ", altrnReg, " => ", result } );
+
+    writeCodeBuffer( { "jumpI ", endAIf } );
+
+    writeCodeBuffer( { endAIf, ":" } );
+
+    return result;
+}
+
+
 Any
 elaborationVisitor::visitFieldAccess(titaniaParser::FieldAccessContext *ctx ) {
     writeCodeBuffer( { "# ---------------- Field access on line ", 

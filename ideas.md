@@ -105,14 +105,13 @@ To build an executable program, run:
    g++ -std=c++17 -I ../include/antlr4-runtime/ *.cpp *.cc ../lib/libantlr4-runtime.a -o main
 
 # todo
-    [] the type checker doesn't look at #ExprStmnt
     [x] the type checker doesn't check the body of while/do
     [x] the type checker dosen't check the then body of if/then/else
     [x] the type checker doesn't check the else body (if there is one) of if/then/else
-    [] the ir generator doesn't look at #ExprStmnt
+    [] the ir generator doesn't look at #ExprStmnt (does it need to? the default is to visit the children)
     [x] the ir generator doesn't look at #FieldAccess
     [x] the ir generator doesn't look at #ArrayAccess as RHS
     [x] the ir generator doesn't look at #ArrayAccess as LHS
     [] the ir generator doesn't look at #TakeReference
-    [] the ir generator doesn't look at #ArithmaticIf
+    [x] the ir generator doesn't look at #ArithmaticIf
     [x] array decls should have a size component

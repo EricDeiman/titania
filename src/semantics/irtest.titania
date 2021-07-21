@@ -35,4 +35,5 @@ begin
         showi( x ) ;
         x <- x + 1 ;
     end 
+    y <- x < 7 ? 42 : 21 ;
 end
