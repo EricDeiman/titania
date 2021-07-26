@@ -8,6 +8,15 @@ module irtest
     const
         c : integer = 2
 
+    function
+        id( x : integer, y : integer ) : integer =
+        var
+            z : integer
+        begin
+            (* don't really do anything yet *)
+            z <- x ;
+        end
+
     var
         x : integer ;
         y : integer ;
@@ -36,4 +45,7 @@ begin
         x <- x + 1 ;
     end 
     y <- x < 7 ? 42 : 21 ;
+
+    id( x, y ) ;
+
 end

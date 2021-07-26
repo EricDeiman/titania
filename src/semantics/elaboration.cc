@@ -154,6 +154,9 @@ elaborationVisitor::visitPrefixNegative( titaniaParser::PrefixNegativeContext* c
 
 Any
 elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx ) {
+    writeCodeBuffer( { "# ................ function call on line ", 
+        std::to_string( ctx->getStart()->getLine() ) } );
+
     auto fnId = ctx->name->getText();
 
     std::string fnReg;
@@ -169,19 +172,52 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
         }
     }
 
+    auto returnAddr = makeLabel( fnId + "_return" );
+
+    // ------- precall
+    // registers saved
+    // access link
+    // caller's ARP
+    // return address
+    // return value
+    // paramaters
+
+    // no saved registers yet
+
+    // no access link yet
+
+    writeCodeBuffer( { "push rarp" } );  // caller's rarp
+
+    writeCodeBuffer( { "pushi @", returnAddr } );  // return address
+
+    writeCodeBuffer( { "pushi 0" } );  // return value
+
     for( auto x = ctx->args.rbegin(); x != ctx->args.rend(); x++ ) {
         auto res = static_cast< std::string >( visit( *x ) );
         codeBuffer.push_back( "push " + res );
     }
 
     codeBuffer.push_back( "call " + fnReg );
+
+    // -------- postreturn
+    writeCodeBuffer( { returnAddr, ":" } );
+
+    // the callee will remove the parameters from the stack
+    
     auto fnResultReg = getFreshRegister();
+    writeCodeBuffer( { "pop ", fnResultReg } );  // get the return value
 
-    if( memoizeExprs ) {
-        codeBuffer.push_back( "pop " + fnResultReg );
-    }
+    writeCodeBuffer( { "pop" } );  // remove and ignore the return address
 
-    return fnResultReg;
+    writeCodeBuffer( { "pop rarp" } );  // get our own ARP
+
+    // no access link yet
+
+    // no saved registers yet
+
+   dumpCodeBuffer( "function call", ctx );
+
+   return fnResultReg;
 }
 
 
@@ -646,11 +682,53 @@ elaborationVisitor::visitWhileDo( titaniaParser::WhileDoContext *ctx ) {
 
 Any
 elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* ctx ) {
-    // The stack will have the return address at the top, followed by argument 1, 
-    // argument 2, ... argument n
+    writeCodeBuffer( { "# ................ function definition on line ", 
+        std::to_string( ctx->getStart()->getLine() ) } );
+
+    // The stack will have the return address at the top, space for the return value,
+    // followed by argument 1, argument 2, ... argument n
+
+    writeCodeBuffer( { ctx->fnName->getText(), ":" } );
+
+    // ------- prologue
+    writeCodeBuffer( { "loadi tos => rarp" } );
+
+    // set up space on the stack for locals
+    auto localCnt = 0;
+    if( ctx->constSection() ) {
+        auto constSect = ctx->constSection();
+        localCnt += constSect->constElem().size();
+    }
+
+    if( ctx->varSection() ) {
+        auto varSect = ctx->varSection();
+        localCnt += varSect->varElem().size();
+    }
+
+    for( auto i = 0; i < localCnt; i++ ) {
+        writeCodeBuffer( { "pushi 0" } );
+    }
+
+    // TODO: do something for the body here
+    visit( ctx->body() );
+
+    // ------- epilogue
+    // remove stack space for the locals
+    for( auto i = 0; i < localCnt; i++ ) {
+        writeCodeBuffer( { "pop  # local" } );
+    }
+
+    // remove stack space for the parameters
+    for( auto i = 0; i < ctx->idDecl().size(); i++ ) {
+        writeCodeBuffer( { "pop  # parameter" } );
+    }
+
+    writeCodeBuffer( { "ret" } ); 
 
     return "0";
 }
+
+// -------------------------------------------------------------------------------------
 
 
 std::string
