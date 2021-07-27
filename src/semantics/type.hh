@@ -58,6 +58,9 @@ public:
     // for fields; the offset from the front of the record to this field.
     size_t fieldOffset;
 
+    // for variables and constants; how far from the activation record pointer the data is
+    size_t arpOffset;
+
     std::ostream &
     dump( std::ostream & );
 };
@@ -246,6 +249,10 @@ private:
 
     int nameSuffix = 0;
     int errors = 0;
+
+    // managing this with the way function decls sits between const decls and 
+    // var decls needs some care.
+    size_t runningArpOffset = 0;
 
     Symbol symInteger;
     Symbol symString;

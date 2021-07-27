@@ -192,6 +192,12 @@ typeVisitor::visitTypeRecord( titaniaParser::TypeRecordContext* ctx ) {
             }
         }
 
+        auto sz = 0;
+        for( auto f : recordType.second.fields ) {
+            sz += f.sizeInBytes;
+        }
+        recordType.second.sizeInBytes = sz;
+
         scopes.back().insert( std::move( recordType ) );
     }
     return 0;
@@ -301,6 +307,9 @@ typeVisitor::visitTypeArray( titaniaParser::TypeArrayContext* ctx ) {
                 "invalid type ({name}) for array " + arrayType.first,
                 sourceLine( ctx ) ) ) {
 
+            auto baseTypeSymbol = lookUp( arrayType.second.base );
+            arrayType.second.sizeInBytes = arrayType.second.arrayLength * 
+                baseTypeSymbol.second.sizeInBytes;
             scopes.back().insert( std::move( arrayType ) );
         }
     }
@@ -388,11 +397,18 @@ typeVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* 
 
             SymbolTable functionLocal;
 
+            auto oldRunningArpOffset = runningArpOffset;
+            runningArpOffset = 0;
+
             std::pair< std::string, Symbol > param;
             for(auto i : ctx->idDecl() ) {
                 param.first = param.second.name = i->name->getText();
                 param.second.base = i->type->getText();
                 param.second.type = symbolType::variable;
+
+                auto baseTypeSymbol = lookUp( param.second.base );
+                param.second.arpOffset = runningArpOffset;
+                runningArpOffset += baseTypeSymbol.second.sizeInBytes;
 
                 functionLocal.insert( std::move( param ) );
             }
@@ -405,6 +421,8 @@ typeVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* 
             definingFunctionNames.pop();
             symbolTables[ ctx ] = scopes.back();
             scopes.pop_back();
+
+            runningArpOffset = oldRunningArpOffset;
 
             return result;            
         }
@@ -434,7 +452,8 @@ typeVisitor::visitConstElem( titaniaParser::ConstElemContext* ctx ) {
         if( validateType( constDecl.second.base,
                 "invalid type {name} for constant " + constDecl.second.name,
                 sourceLine( ctx ) ) ) {
-
+            constDecl.second.arpOffset = runningArpOffset;
+            runningArpOffset += constDecl.second.sizeInBytes;
             scopes.back().insert( std::move( constDecl ) );
         }
 
@@ -472,6 +491,9 @@ typeVisitor::visitVarElem( titaniaParser::VarElemContext* ctx ) {
         if( validateType( varDecl.second.base,
                 "invalid type ({name}) for variable " + varDecl.second.name,
                 sourceLine( ctx ) ) ) {
+
+            varDecl.second.arpOffset = runningArpOffset;
+            runningArpOffset += varDecl.second.sizeInBytes;
 
             scopes.back().insert( std::move( varDecl ) );
         } 
