@@ -19,11 +19,40 @@ elaborationVisitor::elaborationVisitor( typeVisitor &type ) {
 }
 
 Any
+elaborationVisitor::visitFile( titaniaParser::FileContext* ctx ) {
+
+    scopes.push_back( symbolTables[ ctx ] );
+
+    // set up the stack to look like a function call has been made even though there
+    // isn't one
+
+    writeCodeBuffer( { "pushi 0  # phoney global access link" } );
+    writeCodeBuffer( { "pushi 0  # phoney global ARP" } );
+    writeCodeBuffer( { "pushi 0  # phoney global return address" } );
+    writeCodeBuffer( { "pushi 0  # phoney global return value" } );
+
+    writeCodeBuffer( { "i2i tos => rarp  # set up initial rarp" } );
+
+    visitChildren( ctx );
+
+    scopes.pop_back();
+
+    return "";
+}
+
+Any
 elaborationVisitor::visitIdentifier( titaniaParser::IdentifierContext *ctx ) {
     std::string result;
     std::string id{ ctx->ID()->getText() };
 
     std::string reg1;
+
+    auto idSymbol = lookupId( id );
+    writeCodeBuffer( { "# . . . . . . . .  offset of ", id, " from ARP is ",
+        std::to_string( idSymbol.second.arpOffset ), " and lexical level is ", 
+        std::to_string( idSymbol.second.lexicalNest), " (current lexical level is ",
+        std::to_string( scopes.size() ), ")"
+    } );
 
     if( valuesScopesCount( "@" + id ) > 0 ) {
         reg1 = valuesScopesLookup( "@" + id );
@@ -184,13 +213,15 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
 
     // no saved registers yet
 
-    // no access link yet
+    writeCodeBuffer ( { "pushi 0  # access link" } );
 
     writeCodeBuffer( { "push rarp" } );  // caller's rarp
 
     writeCodeBuffer( { "pushi @", returnAddr } );  // return address
 
-    writeCodeBuffer( { "pushi 0" } );  // return value
+    writeCodeBuffer( { "pushi 0  # space for return value" } );  // return value
+
+    writeCodeBuffer( { "i2i tos => rarp  # set up callee arp" } );
 
     for( auto x = ctx->args.rbegin(); x != ctx->args.rend(); x++ ) {
         auto res = static_cast< std::string >( visit( *x ) );
@@ -572,12 +603,55 @@ elaborationVisitor::visitConstElem( titaniaParser::ConstElemContext* ctx ) {
     }
     else {
         auto reg1 = getFreshRegister();
-        writeCodeBuffer( { "loadi @", id, " => ", reg1 } );
 
+        auto idSymbol = lookupId( id );
+        writeCodeBuffer( { "inctos ", std::to_string( idSymbol.second.sizeInBytes ),
+            "  # make space for ", id
+        });
+
+        //writeCodeBuffer( { "loadi @", id, " => ", reg1 } );
+        writeCodeBuffer( { "loadi ", std::to_string( idSymbol.second.arpOffset), 
+            " => ", reg1, "  # @", id, " = ", std::to_string( idSymbol.second.arpOffset)
+        } );
         writeCodeBuffer( { "storeao ", expr, " => rarp, ", reg1 } );
 
         if( memoizeExprs ) {
             valuesScopes.back()[ "@" + id ] = reg1;
+        }
+    }
+
+    return result;
+}
+
+Any
+elaborationVisitor::visitVarElem( titaniaParser::VarElemContext* ctx ) {
+    auto id = ctx->idDecl()->name->getText();
+
+    std::string result;
+
+    if( memoizeExprs && valuesScopesCount( id ) > 0 ) {
+        result = valuesScopesLookup( id );
+    }
+    else {
+        auto reg1 = getFreshRegister();
+
+        auto idSymbol = lookupId( id );
+        writeCodeBuffer( { "inctos ", std::to_string( idSymbol.second.sizeInBytes ),
+            "  # make space for ", id
+        });
+
+        if( ctx->expression() ) {
+            auto expr = static_cast< std::string >( visit( ctx->expression() ) );
+            
+            //writeCodeBuffer( { "loadi @", id, " => ", reg1 } );
+            writeCodeBuffer( { "loadi ", std::to_string( idSymbol.second.arpOffset ),
+                 " => ", reg1, "  # @", id, " = ", std::to_string( idSymbol.second.arpOffset )
+            } );
+            writeCodeBuffer( { "storeao ", expr, " => rarp, ", reg1 } );
+
+            if( memoizeExprs ) {
+                valuesScopes.back()[ "@" + id ] = reg1;
+            }
         }
     }
 

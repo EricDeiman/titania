@@ -60,6 +60,7 @@ public:
 
     // for variables and constants; how far from the activation record pointer the data is
     size_t arpOffset;
+    size_t lexicalNest;
 
     std::ostream &
     dump( std::ostream & );

@@ -452,7 +452,12 @@ typeVisitor::visitConstElem( titaniaParser::ConstElemContext* ctx ) {
         if( validateType( constDecl.second.base,
                 "invalid type {name} for constant " + constDecl.second.name,
                 sourceLine( ctx ) ) ) {
+
+            auto baseSymbol = lookUp( constDecl.second.base );
+            constDecl.second.sizeInBytes = baseSymbol.second.sizeInBytes;
+
             constDecl.second.arpOffset = runningArpOffset;
+            constDecl.second.lexicalNest = scopes.size();
             runningArpOffset += constDecl.second.sizeInBytes;
             scopes.back().insert( std::move( constDecl ) );
         }
@@ -492,8 +497,12 @@ typeVisitor::visitVarElem( titaniaParser::VarElemContext* ctx ) {
                 "invalid type ({name}) for variable " + varDecl.second.name,
                 sourceLine( ctx ) ) ) {
 
+            auto baseSymbol = lookUp( varDecl.second.base );
+            varDecl.second.sizeInBytes = baseSymbol.second.sizeInBytes;
+
             varDecl.second.arpOffset = runningArpOffset;
             runningArpOffset += varDecl.second.sizeInBytes;
+            varDecl.second.lexicalNest = scopes.size();
 
             scopes.back().insert( std::move( varDecl ) );
         } 

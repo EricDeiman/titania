@@ -1,0 +1,15 @@
+module iroffsettest
+    
+    const
+        pi : integer = 3
+
+    var
+        x : integer ;
+        y : integer <- 7 ;
+        z : integer
+
+begin
+
+    z <- pi * x * x + y ;
+
+end

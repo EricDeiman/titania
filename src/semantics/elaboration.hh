@@ -23,6 +23,9 @@ public:
     elaborationVisitor( typeVisitor & );
 
     Any
+    visitFile( titaniaParser::FileContext* ) override;
+
+    Any
     visitIdentifier( titaniaParser::IdentifierContext* ) override;
 
     Any
@@ -66,6 +69,10 @@ public:
 
     Any
     visitConstElem( titaniaParser::ConstElemContext* ) override;
+
+    Any
+    visitVarElem( titaniaParser::VarElemContext* ) override;
+
 
     Any
     visitArrayAccess( titaniaParser::ArrayAccessContext * ) override;
