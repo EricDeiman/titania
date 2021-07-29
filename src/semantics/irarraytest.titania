@@ -21,15 +21,15 @@ module irarraytest
         threeIntsArray : arrayOf3Ints ;
 
 begin
-(*    x <- testIntArray[ 3 ] ;
+    x <- testIntArray[ 3 ] ;
     testIntArray[ 5 ] <- 42 ;
-*)
+
 (*    x <- test3Ints.two ;
     test3Ints.three <- 2 ;
 *)
 
-    x <- threeIntsArray[ 4 ].three ;
+(*    x <- threeIntsArray[ 4 ].three ;
     threeIntsArray[ 5 ].two <- 42 ;
-
+*)
 
 end
