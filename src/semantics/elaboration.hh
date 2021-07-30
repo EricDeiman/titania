@@ -92,6 +92,9 @@ public:
     Any
     visitWhileDo( titaniaParser::WhileDoContext * ) override;
 
+    std::ostream&
+    dumpCodeBuffer( std::ostream & );
+
 private:
 
     std::string

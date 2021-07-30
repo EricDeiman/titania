@@ -1,0 +1,21 @@
+module irfntest
+
+    const
+        pi : integer = 2
+
+    function
+        id( x : integer ) : integer =
+            var
+                y : integer <- 21
+            begin
+                y <- x ;
+            end
+
+    var
+        z : integer <- 42 
+
+begin
+
+    id( 17 ) ;
+
+end

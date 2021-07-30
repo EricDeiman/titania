@@ -355,6 +355,9 @@ typeVisitor::visitForwardFunction( titaniaParser::ForwardFunctionContext* ctx ) 
 Any
 typeVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* ctx ) {
 
+    auto oldRunningArpOffset = runningArpOffset;
+    runningArpOffset = 0;
+
     std::pair< std::string, Symbol > functionType;
     functionType.second.type = symbolType::function;
 
@@ -381,10 +384,16 @@ typeVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* 
                         sourceLine( ctx )) ) {
 
                     field.base = i->type->getText();
-                    
+
                     if( validateType( field.base,
                             "invalid type ({name}) for argument " + field.name + " for function " + functionType.first,
                             sourceLine( ctx ) ) ) {
+
+                        auto baseSymbol = lookUp( field.base );
+                        field.sizeInBytes = baseSymbol.second.sizeInBytes;
+                        field.arpOffset = runningArpOffset;
+                        runningArpOffset += field.sizeInBytes;
+                        field.lexicalNest = scopes.size() + 1;
 
                         functionType.second.fields.push_back( std::move( field ) );
                     }
@@ -397,7 +406,7 @@ typeVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* 
 
             SymbolTable functionLocal;
 
-            auto oldRunningArpOffset = runningArpOffset;
+//            auto oldRunningArpOffset = runningArpOffset;
             runningArpOffset = 0;
 
             std::pair< std::string, Symbol > param;
@@ -409,6 +418,8 @@ typeVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* 
                 auto baseTypeSymbol = lookUp( param.second.base );
                 param.second.arpOffset = runningArpOffset;
                 runningArpOffset += baseTypeSymbol.second.sizeInBytes;
+                param.second.sizeInBytes = baseTypeSymbol.second.sizeInBytes;
+                param.second.lexicalNest = scopes.size() + 1;
 
                 functionLocal.insert( std::move( param ) );
             }
@@ -422,14 +433,15 @@ typeVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* 
             symbolTables[ ctx ] = scopes.back();
             scopes.pop_back();
 
-            runningArpOffset = oldRunningArpOffset;
+//            runningArpOffset = oldRunningArpOffset;
 
             return result;            
         }
     }
 
-    return 0;
+    runningArpOffset = oldRunningArpOffset;
 
+    return 0;
 }
 
 Any

@@ -58,7 +58,6 @@ elaborationVisitor::visitIdentifier( titaniaParser::IdentifierContext *ctx ) {
     } );
 
     auto framesBack = scopes.size() - idSymbol.second.lexicalNest;
-    assert( framesBack == 0 );
 
     if( valuesScopesCount( "@" + id ) > 0 ) {
         reg1 = valuesScopesLookup( "@" + id );
@@ -766,14 +765,14 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
     writeCodeBuffer( { "# ................ function definition on line ", 
         std::to_string( ctx->getStart()->getLine() ) } );
 
+    scopes.push_back( symbolTables[ ctx ] );
+
     // The stack will have the return address at the top, space for the return value,
     // followed by argument 1, argument 2, ... argument n
 
     writeCodeBuffer( { ctx->fnName->getText(), ":" } );
 
     // ------- prologue
-    writeCodeBuffer( { "loadi tos => rarp" } );
-
     // set up space on the stack for locals
     auto localCnt = 0;
     if( ctx->constSection() ) {
@@ -789,6 +788,9 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
     for( auto i = 0; i < localCnt; i++ ) {
         writeCodeBuffer( { "pushi 0" } );
     }
+
+    visit( ctx->constSection() );
+    visit( ctx->varSection() );
 
     // TODO: do something for the body here
     visit( ctx->body() );
@@ -806,11 +808,22 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
 
     writeCodeBuffer( { "ret" } ); 
 
+    scopes.pop_back();
+
     return "0";
 }
 
 // -------------------------------------------------------------------------------------
 
+
+std::ostream&
+elaborationVisitor::dumpCodeBuffer( std::ostream &os ) {
+    for( auto s : codeBuffer ) {
+        os << s << std::endl;
+    }
+
+    return os;
+}
 
 std::string
 elaborationVisitor::getFreshRegister() {
@@ -853,6 +866,8 @@ elaborationVisitor::writeCodeBuffer( std::vector< std::string > data ) {
 
 void
 elaborationVisitor::dumpCodeBuffer( std::string description, antlr4::ParserRuleContext *ctx ) {
+    return;
+    // hide this for now
     std::cout << "debug: at " << description << " on line " << ctx->getStart()->getLine() << 
         std::endl;
     std::cout << "ir code so far: " << std::endl;
@@ -939,6 +954,9 @@ main( int argc, char** argv ) {
             std::cout << "elaborating " << std::endl;
             elaborationVisitor irGen{ typecheck };
             irGen.visit( tree );
+            std::cout << std::endl << std::endl;
+            irGen.dumpCodeBuffer( std::cout );
+            std::cout << std::endl;
         }
     }
 
