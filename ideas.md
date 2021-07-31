@@ -117,3 +117,4 @@ To build an executable program, run:
     [x] array decls should have a size component
     [] get the absolute address of variables and constants rather than offset from ARP
     []  look up variables and constants in outer scopes
+    [] what to do with non-interger-sized results

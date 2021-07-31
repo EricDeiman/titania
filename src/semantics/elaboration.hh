@@ -83,6 +83,9 @@ public:
     Any 
     visitArithmaticIf( titaniaParser::ArithmaticIfContext * ) override;
 
+    Any 
+    visitFunctionSection( titaniaParser::FunctionSectionContext * ) override;
+    
     Any
     visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* ) override;
 
@@ -117,6 +120,12 @@ private:
     dumpCodeBuffer( std::string, antlr4::ParserRuleContext * );
 
     std::vector< std::string > codeBuffer;
+    std::vector< std::string > fnCodeBuffer;
+    std::vector< std::string >* theCodeBuffer;
+
+    void
+    switchCodeBuffer();
+
     std::unordered_map< std::string, std::string > valuesMap;
     std::vector< std::unordered_map< std::string, std::string > >valuesScopes;
 

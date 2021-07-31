@@ -406,7 +406,6 @@ typeVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* 
 
             SymbolTable functionLocal;
 
-//            auto oldRunningArpOffset = runningArpOffset;
             runningArpOffset = 0;
 
             std::pair< std::string, Symbol > param;
@@ -433,13 +432,11 @@ typeVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* 
             symbolTables[ ctx ] = scopes.back();
             scopes.pop_back();
 
-//            runningArpOffset = oldRunningArpOffset;
+            runningArpOffset = oldRunningArpOffset;
 
             return result;            
         }
     }
-
-    runningArpOffset = oldRunningArpOffset;
 
     return 0;
 }

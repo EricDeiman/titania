@@ -19,6 +19,7 @@ elaborationVisitor::elaborationVisitor( typeVisitor &type ) {
     valuesScopes.back()[ "0" ] = reg;
     valuesScopes.back()[ "false" ] = reg;
 
+    theCodeBuffer = &codeBuffer;
 }
 
 Any
@@ -38,6 +39,7 @@ elaborationVisitor::visitFile( titaniaParser::FileContext* ctx ) {
 
     visitChildren( ctx );
 
+    writeCodeBuffer( { "hlt  # end the program" } );
     scopes.pop_back();
 
     return "";
@@ -194,6 +196,10 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
 
     auto fnId = ctx->name->getText();
 
+    auto fnSymbol = lookupId( fnId );
+    assert( fnSymbol.first );
+    auto fnBaseSymbol = lookupId( fnSymbol.second.base );
+
     std::string fnReg;
 
     if( memoizeExprs && valuesScopesCount( "@" + fnId ) > 0 ) {
@@ -219,22 +225,32 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
 
     // no saved registers yet
 
-    writeCodeBuffer ( { "pushi 0  # access link" } );
+    if( scopes.size() == 2 ) {
+        writeCodeBuffer ( { "pushi raprp  # global access link" } );
+    }
+    else {
+        auto treg1 = getFreshRegister();
+        auto treg2 = getFreshRegister();
+        writeCodeBuffer( { "subi rarp, 32 => ", treg1, " #  use my access link" } );
+        writeCodeBuffer( { "loadi ", treg1, " => ", treg2 } );
+        writeCodeBuffer( { "pushi ", treg2 } );
+    }
 
     writeCodeBuffer( { "push rarp" } );  // caller's rarp
 
     writeCodeBuffer( { "pushi @", returnAddr } );  // return address
 
-    writeCodeBuffer( { "pushi 0  # space for return value" } );  // return value
+    writeCodeBuffer( { "inctos ", std::to_string( fnBaseSymbol.second.sizeInBytes ), 
+        "  # space for return value" } );  // return value
 
     writeCodeBuffer( { "i2i tos => rarp  # set up callee arp" } );
 
     for( auto x = ctx->args.rbegin(); x != ctx->args.rend(); x++ ) {
         auto res = static_cast< std::string >( visit( *x ) );
-        codeBuffer.push_back( "push " + res );
+        writeCodeBuffer( { "push ", res } );
     }
 
-    codeBuffer.push_back( "call " + fnReg );
+    writeCodeBuffer( { "call ", fnReg } );
 
     // -------- postreturn
     writeCodeBuffer( { returnAddr, ":" } );
@@ -242,13 +258,13 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
     // the callee will remove the parameters from the stack
     
     auto fnResultReg = getFreshRegister();
-    writeCodeBuffer( { "pop ", fnResultReg } );  // get the return value
+    writeCodeBuffer( { "pop ", fnResultReg, "  # return value" } );  // what to do with non-interger sized results?
 
-    writeCodeBuffer( { "pop" } );  // remove and ignore the return address
+    writeCodeBuffer( { "pop", "  # return address" } );  // remove and ignore the return address
 
     writeCodeBuffer( { "pop rarp" } );  // get our own ARP
 
-    // no access link yet
+    writeCodeBuffer( { "pop", "  # access link" } );  // access link yet
 
     // no saved registers yet
 
@@ -316,7 +332,7 @@ elaborationVisitor::visitAndOp( titaniaParser::AndOpContext* ctx ) {
     auto right = static_cast< std::string >( visit( ctx->right ) );
     writeCodeBuffer( { "i2i ", right, " => ", result } );
 
-    codeBuffer.push_back( end + ":" );
+    writeCodeBuffer( { end, ":" } );
 
     return result;
 }
@@ -339,11 +355,11 @@ elaborationVisitor::visitOrOp( titaniaParser::OrOpContext* ctx ) {
     writeCodeBuffer( { "cbr_neq ", cc, " -> ", l_end, ", ", l_rhs } );
 
     // Otherwise, the entire expression is the result of the RHS
-    codeBuffer.push_back( l_rhs + ":" );
+    writeCodeBuffer( { l_rhs, ":" } );
     auto right = static_cast< std::string >( visit( ctx->right ) );
     writeCodeBuffer( { "i2i ", right, " => ", result } );
 
-    codeBuffer.push_back( l_end + ":" );
+    writeCodeBuffer( { l_end, ":" } );
 
     return result;
 }
@@ -711,7 +727,7 @@ elaborationVisitor::visitIfThen( titaniaParser::IfThenContext *ctx ) {
         writeCodeBuffer( { "jumpI ", endIf } );
     }
 
-    codeBuffer.push_back( endIf + ":" );
+    writeCodeBuffer( { endIf, ":" } );
 
     dumpCodeBuffer( "if statement", ctx );
 
@@ -760,6 +776,18 @@ elaborationVisitor::visitWhileDo( titaniaParser::WhileDoContext *ctx ) {
     return "";
 }
 
+Any 
+elaborationVisitor::visitFunctionSection( titaniaParser::FunctionSectionContext *ctx ) {
+
+    switchCodeBuffer();
+
+    visitChildren( ctx );
+
+    switchCodeBuffer();
+
+    return "";
+}
+
 Any
 elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* ctx ) {
     writeCodeBuffer( { "# ................ function definition on line ", 
@@ -785,12 +813,13 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
         localCnt += varSect->varElem().size();
     }
 
-    for( auto i = 0; i < localCnt; i++ ) {
-        writeCodeBuffer( { "pushi 0" } );
+    if( ctx->constSection() ) {
+        visit( ctx->constSection() );
     }
 
-    visit( ctx->constSection() );
-    visit( ctx->varSection() );
+    if( ctx->varSection() ) {
+        visit( ctx->varSection() );
+    }
 
     // TODO: do something for the body here
     visit( ctx->body() );
@@ -819,6 +848,12 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
 std::ostream&
 elaborationVisitor::dumpCodeBuffer( std::ostream &os ) {
     for( auto s : codeBuffer ) {
+        os << s << std::endl;
+    }
+
+    os << std::endl;
+
+    for( auto s : fnCodeBuffer ) {
         os << s << std::endl;
     }
 
@@ -861,7 +896,7 @@ elaborationVisitor::writeCodeBuffer( std::vector< std::string > data ) {
         buffer += s;
     }
 
-    codeBuffer.push_back( buffer );
+    theCodeBuffer->push_back( buffer );
 }
 
 void
@@ -872,7 +907,7 @@ elaborationVisitor::dumpCodeBuffer( std::string description, antlr4::ParserRuleC
         std::endl;
     std::cout << "ir code so far: " << std::endl;
 
-    for( auto s : codeBuffer ) {
+    for( auto s : *theCodeBuffer ) {
         std::cout << "\t" << s << std::endl;
     }
 
@@ -922,6 +957,16 @@ elaborationVisitor::lookupId( std::string id ) {
     }
 
     return result;
+}
+
+void
+elaborationVisitor::switchCodeBuffer() {
+    if( theCodeBuffer == &codeBuffer ) {
+        theCodeBuffer = &fnCodeBuffer;
+    }
+    else {
+        theCodeBuffer = &codeBuffer;
+    }
 }
 
 // --------------------------------------------------------------------------------------

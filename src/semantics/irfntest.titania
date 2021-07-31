@@ -1,14 +1,14 @@
 module irfntest
 
     const
-        pi : integer = 2
+        pi : integer = 3
 
     function
         id( x : integer ) : integer =
             var
                 y : integer <- 21
             begin
-                y <- x ;
+                y <- id( x ) ;
             end
 
     var
