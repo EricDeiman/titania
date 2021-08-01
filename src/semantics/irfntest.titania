@@ -8,7 +8,7 @@ module irfntest
             var
                 y : integer <- 21
             begin
-                y <- id( x ) ;
+                y <- x ;
             end
 
     var

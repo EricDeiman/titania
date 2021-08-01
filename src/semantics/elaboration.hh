@@ -13,6 +13,7 @@
 #include "../include/titaniaParser.h"
 #include "../include/titaniaBaseVisitor.h"
 
+#include "codebuffer.hh"
 #include "type.hh"
 
 using Any = antlrcpp::Any;
@@ -83,9 +84,6 @@ public:
     Any 
     visitArithmaticIf( titaniaParser::ArithmaticIfContext * ) override;
 
-    Any 
-    visitFunctionSection( titaniaParser::FunctionSectionContext * ) override;
-    
     Any
     visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* ) override;
 
@@ -100,40 +98,9 @@ public:
 
 private:
 
-    std::string
-    getFreshRegister();
-
-    // CC stands for condition code
-    std::string
-    getFreshCCRegister();
-
-    std::string
-    makeLabel( std::string );
-
-    std::vector< std::string >
-    makeLabel( std::vector< std::string > );
-
-    void
-    writeCodeBuffer( std::vector< std::string > );
-
-    void
-    dumpCodeBuffer( std::string, antlr4::ParserRuleContext * );
-
-    std::vector< std::string > codeBuffer;
-    std::vector< std::string > fnCodeBuffer;
-    std::vector< std::string >* theCodeBuffer;
-
-    void
-    switchCodeBuffer();
-
-    std::unordered_map< std::string, std::string > valuesMap;
-    std::vector< std::unordered_map< std::string, std::string > >valuesScopes;
-
-    size_t
-    valuesScopesCount( std::string );
-
-    std::string
-    valuesScopesLookup( std::string );
+    CodeBuffer globalCodeBuffer{ true };
+    std::vector< CodeBuffer > fnCodeBuffers;
+    CodeBuffer* theCodeBuffer;
 
     std::vector<SymbolTable> 
     scopes;
@@ -145,13 +112,8 @@ private:
     lookupId( std::string );
 
 
-    int registerNum = 0;
-
     // look up an ID and return the address of it, rather than the value of it
     bool asAddress = false;
-
-    int ccNum = 0;
-    int labelSuffix = 0;
 
     bool memoizeExprs = true;
 };

@@ -1,7 +1,7 @@
 LIBDIR = ../lib
 INCDIR = ../include
 
-OBJS = type.o elaboration.o
+OBJS = type.o elaboration.o codebuffer.o
 
 CXXFLAGS += -std=c++17 -g -I $(INCDIR) -I $(INCDIR)/antlr4-runtime -L $(LIBDIR)
 
@@ -13,7 +13,9 @@ $(INCDIR)/titaniaLexer.h
 elaboration.o : elaboration.cc elaboration.hh $(INCDIR)/titaniaBaseVisitor.h $(INCDIR)/titaniaParser.h \
 $(INCDIR)/titaniaLexer.h
 
-doit : type.o elaboration.o $(LIBDIR)/libtitaniaParser.a
+codebuffer.o : codebuffer.cc codebuffer.hh
+
+doit : $(OBJS) $(LIBDIR)/libtitaniaParser.a
 	g++ $(CXXFLAGS) $(OBJS) -l titaniaParser -l antlr4-runtime -o $@
 
 .PHONY : clean scrub
