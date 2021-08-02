@@ -319,7 +319,7 @@ elaborationVisitor::visitAndOp( titaniaParser::AndOpContext* ctx ) {
     auto cc = cb->getFreshCCRegister();
     cb->writeCodeBuffer( { "i2i ", left, " => ", result } );
     cb->writeCodeBuffer( { "comp ", r_false, ", ", left, " => ", cc } );
-    cb->writeCodeBuffer( { "cbr_eq ", cc, " -> ", end, ", ", rhs } );
+    cb->writeCodeBuffer( { "cbr_eq ", cc, " -> @", end, ", @", rhs } );
 
     // Otherwise, the entire expression is the result of the RHS
     cb->writeCodeBuffer( { rhs, ":" } );
@@ -346,7 +346,7 @@ elaborationVisitor::visitOrOp( titaniaParser::OrOpContext* ctx ) {
     auto cc = cb->getFreshCCRegister();
     cb->writeCodeBuffer( { "i2i ", left, " => ", result } );
     cb->writeCodeBuffer( { "comp ", r_false, ", ", left, " => ", cc } );
-    cb->writeCodeBuffer( { "cbr_neq ", cc, " -> ", l_end, ", ", l_rhs } );
+    cb->writeCodeBuffer( { "cbr_neq ", cc, " -> @", l_end, ", @", l_rhs } );
 
     // Otherwise, the entire expression is the result of the RHS
     cb->writeCodeBuffer( { l_rhs, ":" } );
@@ -441,7 +441,7 @@ elaborationVisitor::visitArithmaticIf( titaniaParser::ArithmaticIfContext *ctx )
     auto cc = cb->getFreshCCRegister();
 
     cb->writeCodeBuffer( { "comp ", test, ", ",  r_false, " => ", cc } );
-    cb->writeCodeBuffer( { "cbr_neq ", cc, " -> ", consqPart, ", ", altrnPart } );
+    cb->writeCodeBuffer( { "cbr_neq ", cc, " -> @", consqPart, ", @", altrnPart } );
 
     cb->writeCodeBuffer( { consqPart, ":" } );
 
@@ -603,7 +603,7 @@ elaborationVisitor::visitAssignment( titaniaParser::AssignmentContext* ctx ) {
 
     if( seeCurrentFnId ) {
         cb->writeCodeBuffer( { "i2i ", rvalue, " => ", fnReturnReg } );
-        cb->writeCodeBuffer( { "jumpi @", currentFnExitId } );
+        cb->writeCodeBuffer( { "jumpi @", currentFnExitLabel } );
         seeCurrentFnId = false;
     }
     else {
@@ -701,7 +701,7 @@ elaborationVisitor::visitIfThen( titaniaParser::IfThenContext *ctx ) {
 
 
     cb->writeCodeBuffer( { "comp ", test, ", ",  r_false, " => ", cc } );
-    cb->writeCodeBuffer( { "cbr_neq ", cc, " -> ", thenPart, ", ", 
+    cb->writeCodeBuffer( { "cbr_neq ", cc, " -> @", thenPart, ", @", 
         ( hasElseBody ? elsePart : endIf ) } );
 
     cb->writeCodeBuffer( { thenPart, ":" } );
@@ -750,7 +750,7 @@ elaborationVisitor::visitWhileDo( titaniaParser::WhileDoContext *ctx ) {
     auto test1 = static_cast< std::string >( visit( ctx->test ) );
     auto cc1 = cb->getFreshCCRegister();
     cb->writeCodeBuffer( { "comp ", test1, ", ",  r_false, " => ", cc1 } );
-    cb->writeCodeBuffer( { "cbr_neq ", cc1, " -> ", whileBody, ", ", whileEnd } ); 
+    cb->writeCodeBuffer( { "cbr_neq ", cc1, " -> @", whileBody, ", @", whileEnd } ); 
     cb->writeCodeBuffer( { whileBody, ":" } );
 
     std::unordered_map< std::string, std::string > valuesMap;
@@ -765,7 +765,7 @@ elaborationVisitor::visitWhileDo( titaniaParser::WhileDoContext *ctx ) {
     auto test2 = static_cast< std::string >( visit( ctx->test ) );
     auto cc2 = cb->getFreshCCRegister();
     cb->writeCodeBuffer( { "comp ", test2, ", ",  r_false, " => ", cc2 } );
-    cb->writeCodeBuffer( { "cbr_neq ", cc2, " -> ", whileBody, ", ", whileEnd } ); 
+    cb->writeCodeBuffer( { "cbr_neq ", cc2, " -> @", whileBody, ", @", whileEnd } ); 
     cb->writeCodeBuffer( { whileEnd, ":" } );
 
     memoizeExprs = oldMemoize;
@@ -791,7 +791,7 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
     // followed by argument 1, argument 2, ... argument n
 
     cb->writeCodeBuffer( { currentFnName, ":" } );
-    currentFnExitId = cb->makeLabel( currentFnName + "_exit" );
+    currentFnExitLabel = cb->makeLabel( currentFnName + "_exit" );
 
     // ------- prologue
     // set up space on the stack for locals
@@ -817,7 +817,7 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
     // TODO: do something for the body here
     visit( ctx->body() );
 
-    cb->writeCodeBuffer( { currentFnExitId + ":" } );
+    cb->writeCodeBuffer( { currentFnExitLabel + ":" } );
 
     // ------- epilogue
     // remove stack space for the locals
