@@ -100,7 +100,7 @@ private:
 
     CodeBuffer globalCodeBuffer{ true };
     std::vector< CodeBuffer > fnCodeBuffers;
-    CodeBuffer* theCodeBuffer;
+    CodeBuffer* cb;
 
     std::vector<SymbolTable> 
     scopes;
@@ -111,6 +111,8 @@ private:
     std::pair< bool, Symbol >
     lookupId( std::string );
 
+    std::string
+    to_str( size_t );
 
     // look up an ID and return the address of it, rather than the value of it
     bool asAddress = false;
