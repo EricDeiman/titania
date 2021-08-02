@@ -16,6 +16,20 @@ module irfntest
                     id <- x ;
                 end
                 id( y );
+            end ;
+
+        id2( x : integer ) : integer =
+            var
+                y : integer <- 21
+            begin
+                y <- x ;
+                if 21 < y
+                then
+                    id2 <- y ;
+                else
+                    id2 <- x ;
+                end
+                id( y );
             end
 
     var

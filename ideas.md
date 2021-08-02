@@ -120,3 +120,6 @@ To build an executable program, run:
     [] what to do with non-interger-sized results
     [x] change function precall/prolouge/epilouge/postreturn--no need to reserve space
         for return value; callee pops args and pushes results
+    [x] implement assign to fn name as return
+    [] ir code to do record to record assignment
+    [] then there's the whole returning a record from a function thing to work out

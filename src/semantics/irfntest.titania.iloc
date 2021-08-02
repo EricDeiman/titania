@@ -1,0 +1,144 @@
+loadi 0 => r0
+pushi 0  # phoney global access link
+pushi 0  # phoney global ARP
+pushi 0  # phoney global return address
+pushi 0  # phoney global return value
+i2i tos => rarp  # set up initial rarp
+loadi 3 => r1
+inctos 8  # make space for pi
+loadi 0 => r2  # @pi = 0
+storeao r1 => rarp, r2
+# ................ function definition on line 7
+# ................ function definition on line 21
+inctos 8  # make space for z
+loadi 42 => r4
+loadi 8 => r3  # @z = 8
+storeao r4 => rarp, r3
+# ................ function call on line 40
+loadi @id => r5
+push rarp  # global access link
+push rarp
+pushi @id_return0
+i2i tos => rarp  # set up callee arp
+loadi 17 => r6
+push r6
+call r5
+id_return0:
+pop r7  # return value
+pop  # return address
+pop rarp
+pop  # access link
+hlt  # end the program
+
+
+
+id:
+inctos 8  # make space for y
+loadi 21 => r3
+loadi 8 => r2  # @y = 8
+storeao r3 => rarp, r2
+# ................ assignment on line 11
+# . . . . . . . .  offset of x from ARP is 0 and lexical level is 3 (current lexical level is 3)
+addi rapr, 0 => r4
+load r4 => r5
+# . . . . . . . .  offset of y from ARP is 8 and lexical level is 3 (current lexical level is 3)
+storei r5 => r2
+# ................ if/then/else on line 12
+# . . . . . . . .  offset of y from ARP is 8 and lexical level is 3 (current lexical level is 3)
+load r2 => r6
+cmpLT r3, r6 => r7
+comp r7, r0 => cc0
+cbr_neq cc0 -> @thenBody1, @elseBody1
+thenBody1:
+# ................ assignment on line 14
+# . . . . . . . .  offset of y from ARP is 8 and lexical level is 3 (current lexical level is 3)
+load r2 => r8
+i2i r8 => r1
+jumpi @id_exit0
+jumpi @endIf1
+elseBody1:
+# ................ assignment on line 16
+# . . . . . . . .  offset of x from ARP is 0 and lexical level is 3 (current lexical level is 3)
+load r4 => r9
+i2i r9 => r1
+jumpi @id_exit0
+jumpi @endIf1
+endIf1:
+# ................ function call on line 18
+loadi @id => r10
+subi rarp, 32 => r11 #  use my access link
+load r11 => r12
+pushi r12
+push rarp
+pushi @id_return2
+i2i tos => rarp  # set up callee arp
+# . . . . . . . .  offset of y from ARP is 8 and lexical level is 3 (current lexical level is 3)
+load r2 => r13
+push r13
+call r10
+id_return2:
+pop r14  # return value
+pop  # return address
+pop rarp
+pop  # access link
+id_exit0:
+pop  # local
+pop  # parameter
+push r1  #  push return value
+ret
+
+id2:
+inctos 8  # make space for y
+loadi 21 => r3
+loadi 8 => r2  # @y = 8
+storeao r3 => rarp, r2
+# ................ assignment on line 25
+# . . . . . . . .  offset of x from ARP is 0 and lexical level is 3 (current lexical level is 3)
+addi rapr, 0 => r4
+load r4 => r5
+# . . . . . . . .  offset of y from ARP is 8 and lexical level is 3 (current lexical level is 3)
+storei r5 => r2
+# ................ if/then/else on line 26
+# . . . . . . . .  offset of y from ARP is 8 and lexical level is 3 (current lexical level is 3)
+load r2 => r6
+cmpLT r3, r6 => r7
+comp r7, r0 => cc0
+cbr_neq cc0 -> @thenBody1, @elseBody1
+thenBody1:
+# ................ assignment on line 28
+# . . . . . . . .  offset of y from ARP is 8 and lexical level is 3 (current lexical level is 3)
+load r2 => r8
+i2i r8 => r1
+jumpi @id2_exit0
+jumpi @endIf1
+elseBody1:
+# ................ assignment on line 30
+# . . . . . . . .  offset of x from ARP is 0 and lexical level is 3 (current lexical level is 3)
+load r4 => r9
+i2i r9 => r1
+jumpi @id2_exit0
+jumpi @endIf1
+endIf1:
+# ................ function call on line 32
+loadi @id => r10
+subi rarp, 32 => r11 #  use my access link
+load r11 => r12
+pushi r12
+push rarp
+pushi @id_return2
+i2i tos => rarp  # set up callee arp
+# . . . . . . . .  offset of y from ARP is 8 and lexical level is 3 (current lexical level is 3)
+load r2 => r13
+push r13
+call r10
+id_return2:
+pop r14  # return value
+pop  # return address
+pop rarp
+pop  # access link
+id2_exit0:
+pop  # local
+pop  # parameter
+push r1  #  push return value
+ret
+

@@ -43,6 +43,8 @@ elaborationVisitor::visitIdentifier( titaniaParser::IdentifierContext *ctx ) {
 
     std::string reg1;
 
+    // If we see the current function id as the LHS of an assignment statement, the 
+    // statement acts like a return statement
     if( id == currentFnName && inAssignStmnt && asAddress ) {
         seeCurrentFnId = true;
         return fnReturnReg;
@@ -75,7 +77,7 @@ elaborationVisitor::visitIdentifier( titaniaParser::IdentifierContext *ctx ) {
     }
     else {
         std::string reg2 = cb->getFreshRegister();
-        cb->writeCodeBuffer( { "loadi ", reg1, " => ", reg2 } );
+        cb->writeCodeBuffer( { "load ", reg1, " => ", reg2 } );
         result = reg2;
     }
 
@@ -231,8 +233,8 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
         auto treg1 = cb->getFreshRegister();
         auto treg2 = cb->getFreshRegister();
         cb->writeCodeBuffer( { "subi rarp, 32 => ", treg1, " #  use my access link" } );
-        cb->writeCodeBuffer( { "loadi ", treg1, " => ", treg2 } );
-        cb->writeCodeBuffer( { "pushi ", treg2 } );
+        cb->writeCodeBuffer( { "load ", treg1, " => ", treg2 } );
+        cb->writeCodeBuffer( { "push ", treg2 } );
     }
 
     cb->writeCodeBuffer( { "push rarp" } );  // caller's rarp
@@ -607,7 +609,7 @@ elaborationVisitor::visitAssignment( titaniaParser::AssignmentContext* ctx ) {
         seeCurrentFnId = false;
     }
     else {
-        cb->writeCodeBuffer( { "storei ", rvalue, " => ", lvalue } );
+        cb->writeCodeBuffer( { "store ", rvalue, " => ", lvalue } );
     }
 
     return "0";
@@ -632,7 +634,6 @@ elaborationVisitor::visitConstElem( titaniaParser::ConstElemContext* ctx ) {
             "  # make space for ", id
         });
 
-        //cb->writeCodeBuffer( { "loadi @", id, " => ", reg1 } );
         cb->writeCodeBuffer( { "loadi ", to_str( idSymbol.second.arpOffset), 
             " => ", reg1, "  # @", id, " = ", to_str( idSymbol.second.arpOffset)
         } );
@@ -666,7 +667,6 @@ elaborationVisitor::visitVarElem( titaniaParser::VarElemContext* ctx ) {
         if( ctx->expression() ) {
             auto expr = static_cast< std::string >( visit( ctx->expression() ) );
             
-            //cb->writeCodeBuffer( { "loadi @", id, " => ", reg1 } );
             cb->writeCodeBuffer( { "loadi ", to_str( idSymbol.second.arpOffset ),
                  " => ", reg1, "  # @", id, " = ", to_str( idSymbol.second.arpOffset )
             } );
@@ -775,12 +775,12 @@ elaborationVisitor::visitWhileDo( titaniaParser::WhileDoContext *ctx ) {
 
 Any
 elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* ctx ) {
+    CodeBuffer fnCodeBuffer;
+    cb = &fnCodeBuffer;
+
     cb->writeCodeBuffer( { "# ................ function definition on line ", 
         to_str( ctx->getStart()->getLine() ) } );
 
-    //saveGlobalState();
-    CodeBuffer fnCodeBuffer;
-    cb = &fnCodeBuffer;
     currentFnName = ctx->fnName->getText();
 
     fnReturnReg = cb->getFreshRegister();
@@ -914,7 +914,10 @@ main( int argc, char** argv ) {
             elaborationVisitor irGen{ typecheck };
             irGen.visit( tree );
             std::cout << std::endl << std::endl;
+            std::string baseFileName{ argv[ i ] };
+            std::ofstream outFile{ baseFileName + ".iloc"s };
             irGen.dumpCodeBuffer( std::cout );
+            irGen.dumpCodeBuffer( outFile );
             std::cout << std::endl;
         }
     }
