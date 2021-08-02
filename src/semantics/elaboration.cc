@@ -43,6 +43,14 @@ elaborationVisitor::visitIdentifier( titaniaParser::IdentifierContext *ctx ) {
 
     std::string reg1;
 
+    if( id == currentFnName ) {
+        seeCurrentFnId = true;
+        return fnReturnReg;
+    }
+    else {
+        seeCurrentFnId = false;
+    }
+
     auto idSymbol = lookupId( id );
     cb->writeCodeBuffer( { "# . . . . . . . .  offset of ", id, " from ARP is ",
         to_str( idSymbol.second.arpOffset ), " and lexical level is ", 
@@ -230,9 +238,6 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
     cb->writeCodeBuffer( { "push rarp" } );  // caller's rarp
 
     cb->writeCodeBuffer( { "pushi @", returnAddr } );  // return address
-
-    cb->writeCodeBuffer( { "inctos ", to_str( fnBaseSymbol.second.sizeInBytes ), 
-        "  # space for return value" } );  // return value
 
     cb->writeCodeBuffer( { "i2i tos => rarp  # set up callee arp" } );
 
@@ -443,14 +448,14 @@ elaborationVisitor::visitArithmaticIf( titaniaParser::ArithmaticIfContext *ctx )
     auto consqReg = static_cast< std::string >( visit( ctx->consq ) );
     cb->writeCodeBuffer( { "i2i ", consqReg, " => ", result } );
 
-    cb->writeCodeBuffer( { "jumpI ", endAIf } );
+    cb->writeCodeBuffer( { "jumpi @", endAIf } );
 
     cb->writeCodeBuffer( { altrnPart, ":" } );
 
     auto altrnReg = static_cast< std::string >( visit( ctx->altrn ) );
     cb->writeCodeBuffer( { "i2i ", altrnReg, " => ", result } );
 
-    cb->writeCodeBuffer( { "jumpI ", endAIf } );
+    cb->writeCodeBuffer( { "jumpi @", endAIf } );
 
     cb->writeCodeBuffer( { endAIf, ":" } );
 
@@ -594,7 +599,14 @@ elaborationVisitor::visitAssignment( titaniaParser::AssignmentContext* ctx ) {
     auto lvalue = static_cast< std::string >( visit( ctx->lval ) );
     asAddress = oldAsAddress;
 
-    cb->writeCodeBuffer( { "storei ", rvalue, " => ", lvalue } );
+    if( seeCurrentFnId ) {
+        cb->writeCodeBuffer( { "i2i ", rvalue, " => ", fnReturnReg } );
+        cb->writeCodeBuffer( { "jumpi @", currentFnName, "_exit" } );
+        seeCurrentFnId = false;
+    }
+    else {
+        cb->writeCodeBuffer( { "storei ", rvalue, " => ", lvalue } );
+    }
 
     return "0";
 
@@ -699,7 +711,7 @@ elaborationVisitor::visitIfThen( titaniaParser::IfThenContext *ctx ) {
 
     cb->valuesScopes.pop_back();
 
-    cb->writeCodeBuffer( { "jumpI ", endIf } );
+    cb->writeCodeBuffer( { "jumpi @", endIf } );
 
     if( hasElseBody ) {
         cb->writeCodeBuffer( { elsePart, ":" } );
@@ -711,7 +723,7 @@ elaborationVisitor::visitIfThen( titaniaParser::IfThenContext *ctx ) {
 
         cb->valuesScopes.pop_back();
 
-        cb->writeCodeBuffer( { "jumpI ", endIf } );
+        cb->writeCodeBuffer( { "jumpi @", endIf } );
     }
 
     cb->writeCodeBuffer( { endIf, ":" } );
@@ -767,13 +779,17 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
     //saveGlobalState();
     CodeBuffer fnCodeBuffer;
     cb = &fnCodeBuffer;
+    currentFnName = ctx->fnName->getText();
+
+    fnReturnReg = cb->getFreshRegister();
 
     scopes.push_back( symbolTables[ ctx ] );
 
     // The stack will have the return address at the top, space for the return value,
     // followed by argument 1, argument 2, ... argument n
 
-    cb->writeCodeBuffer( { ctx->fnName->getText(), ":" } );
+    cb->writeCodeBuffer( { currentFnName, ":" } );
+    auto exitLabel = cb->makeLabel( currentFnName + "_exit" );
 
     // ------- prologue
     // set up space on the stack for locals
@@ -799,6 +815,8 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
     // TODO: do something for the body here
     visit( ctx->body() );
 
+    cb->writeCodeBuffer( { exitLabel + ":" } );
+
     // ------- epilogue
     // remove stack space for the locals
     for( auto i = 0; i < localCnt; i++ ) {
@@ -809,6 +827,9 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
     for( auto i = 0; i < ctx->idDecl().size(); i++ ) {
         cb->writeCodeBuffer( { "pop  # parameter" } );
     }
+
+    // push the return value onto the stack, somehow
+    cb->writeCodeBuffer( { "push ", fnReturnReg, "  #  push return value" } );
 
     cb->writeCodeBuffer( { "ret" } ); 
 

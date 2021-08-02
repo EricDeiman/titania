@@ -118,3 +118,5 @@ To build an executable program, run:
     [] get the absolute address of variables and constants rather than offset from ARP
     []  look up variables and constants in outer scopes
     [] what to do with non-interger-sized results
+    [x] change function precall/prolouge/epilouge/postreturn--no need to reserve space
+        for return value; callee pops args and pushes results

@@ -118,6 +118,10 @@ private:
     bool asAddress = false;
 
     bool memoizeExprs = true;
+
+    std::string currentFnName;
+    std::string fnReturnReg;
+    bool seeCurrentFnId = false;
 };
 
 #endif
