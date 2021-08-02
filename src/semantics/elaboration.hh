@@ -120,8 +120,10 @@ private:
     bool memoizeExprs = true;
 
     std::string currentFnName;
+    std::string currentFnExitId;
     std::string fnReturnReg;
     bool seeCurrentFnId = false;
+    bool inAssignStmnt = false;
 };
 
 #endif

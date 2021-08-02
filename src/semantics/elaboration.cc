@@ -43,7 +43,7 @@ elaborationVisitor::visitIdentifier( titaniaParser::IdentifierContext *ctx ) {
 
     std::string reg1;
 
-    if( id == currentFnName ) {
+    if( id == currentFnName && inAssignStmnt && asAddress ) {
         seeCurrentFnId = true;
         return fnReturnReg;
     }
@@ -596,12 +596,14 @@ elaborationVisitor::visitAssignment( titaniaParser::AssignmentContext* ctx ) {
 
     auto oldAsAddress = asAddress;
     asAddress = true;
+    inAssignStmnt = true;
     auto lvalue = static_cast< std::string >( visit( ctx->lval ) );
     asAddress = oldAsAddress;
+    inAssignStmnt = false;
 
     if( seeCurrentFnId ) {
         cb->writeCodeBuffer( { "i2i ", rvalue, " => ", fnReturnReg } );
-        cb->writeCodeBuffer( { "jumpi @", currentFnName, "_exit" } );
+        cb->writeCodeBuffer( { "jumpi @", currentFnExitId } );
         seeCurrentFnId = false;
     }
     else {
@@ -789,7 +791,7 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
     // followed by argument 1, argument 2, ... argument n
 
     cb->writeCodeBuffer( { currentFnName, ":" } );
-    auto exitLabel = cb->makeLabel( currentFnName + "_exit" );
+    currentFnExitId = cb->makeLabel( currentFnName + "_exit" );
 
     // ------- prologue
     // set up space on the stack for locals
@@ -815,7 +817,7 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
     // TODO: do something for the body here
     visit( ctx->body() );
 
-    cb->writeCodeBuffer( { exitLabel + ":" } );
+    cb->writeCodeBuffer( { currentFnExitId + ":" } );
 
     // ------- epilogue
     // remove stack space for the locals

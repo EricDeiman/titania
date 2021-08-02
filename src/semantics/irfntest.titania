@@ -15,6 +15,7 @@ module irfntest
                 else
                     id <- x ;
                 end
+                id( y );
             end
 
     var
