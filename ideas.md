@@ -123,3 +123,13 @@ To build an executable program, run:
     [x] implement assign to fn name as return
     [] ir code to do record to record assignment
     [] then there's the whole returning a record from a function thing to work out
+    [] abstract away from text representation of IR
+    [] abstract away from text representation of registers (keep interesting details about
+        them: source program value or compiler generated temporary; known or unknown value;
+        constant or not)
+    [] break the IR into basic blocks
+    [] abstract functions into their own container
+    [x] make code templates for IR generation (that didn't help as much as I thought it would)
+    [] make code templates for x86-64 generation
+    [] lower IR to x86-64, then...
+    [] register allocation

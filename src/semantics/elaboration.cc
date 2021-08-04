@@ -1,5 +1,6 @@
 
 #include "elaboration.hh"
+#include "mustache.hh"
 #include "type.hh"
 
 #include <cassert>
@@ -195,6 +196,35 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
     cb->writeCodeBuffer( { "# ................ function call on line ", 
         to_str( ctx->getStart()->getLine() ) } );
 
+    mustache passLocalAccessLink{
+        {
+            "subi rarp, 32 => {treg1} #  use my access link",
+            "load {treg1} => {treg2}",
+            "push {treg2}",
+        }
+    };
+
+    mustache manipulateARP {
+        {
+            "push rarp",
+            "pushi @{returnAddr}",
+            "i2i tos => rarp  # set up callee arp",
+        }
+    }; 
+
+    mustache callPostcall{
+        {
+            "call {fnReg}",
+            "{returnAddr}:",
+            "pop {fnResultReg}  # return value",
+            "pop  # return address",
+            "pop rarp",
+            "pop  # access link",
+            // no saved registers yet
+        }
+    };
+
+
     auto fnId = ctx->name->getText();
 
     auto fnSymbol = lookupId( fnId );
@@ -230,41 +260,33 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
         cb->writeCodeBuffer ( { "push rarp  # global access link" } );
     }
     else {
-        auto treg1 = cb->getFreshRegister();
-        auto treg2 = cb->getFreshRegister();
-        cb->writeCodeBuffer( { "subi rarp, 32 => ", treg1, " #  use my access link" } );
-        cb->writeCodeBuffer( { "load ", treg1, " => ", treg2 } );
-        cb->writeCodeBuffer( { "push ", treg2 } );
+        dictionary replaceAccessLink {
+            { "treg1", cb->getFreshRegister() },
+            { "treg2", cb->getFreshRegister() },
+        };
+
+        passLocalAccessLink.populate( replaceAccessLink, *cb );
     }
 
-    cb->writeCodeBuffer( { "push rarp" } );  // caller's rarp
+    dictionary replaceManipulateARP {
+        { "returnAddr", returnAddr },
+    };
 
-    cb->writeCodeBuffer( { "pushi @", returnAddr } );  // return address
-
-    cb->writeCodeBuffer( { "i2i tos => rarp  # set up callee arp" } );
+    manipulateARP.populate( replaceManipulateARP, *cb );
 
     for( auto x = ctx->args.rbegin(); x != ctx->args.rend(); x++ ) {
         auto res = static_cast< std::string >( visit( *x ) );
         cb->writeCodeBuffer( { "push ", res } );
     }
 
-    cb->writeCodeBuffer( { "call ", fnReg } );
-
-    // -------- postreturn
-    cb->writeCodeBuffer( { returnAddr, ":" } );
-
-    // the callee will remove the parameters from the stack
-    
     auto fnResultReg = cb->getFreshRegister();
-    cb->writeCodeBuffer( { "pop ", fnResultReg, "  # return value" } );  // what to do with non-interger sized results?
+    dictionary replaceCallReturn{
+        { "fnResultReg", fnResultReg },
+        { "returnAddr", returnAddr },
+        { "fnReg", fnReg },
+    };
 
-    cb->writeCodeBuffer( { "pop", "  # return address" } );  // remove and ignore the return address
-
-    cb->writeCodeBuffer( { "pop rarp" } );  // get our own ARP
-
-    cb->writeCodeBuffer( { "pop", "  # access link" } );  // access link yet
-
-    // no saved registers yet
+    callPostcall.populate( replaceCallReturn, *cb );
 
    return fnResultReg;
 }
@@ -309,26 +331,41 @@ Any
 elaborationVisitor::visitAndOp( titaniaParser::AndOpContext* ctx ) {
 
     // Evaluate the LHS
-    auto left = static_cast< std::string >( visit( ctx->left ) );
-    
-    auto r_false = cb->valuesScopesLookup( "false" );
-    auto labels = cb->makeLabel( { "andEnd", "rhs", "" } );
-    auto end = labels[ 0 ];
-    auto rhs = labels[ 1 ];
-    std::string result = cb->getFreshRegister();
-
     // if the result of the LHS is false, the entire expression is false
-    auto cc = cb->getFreshCCRegister();
-    cb->writeCodeBuffer( { "i2i ", left, " => ", result } );
-    cb->writeCodeBuffer( { "comp ", r_false, ", ", left, " => ", cc } );
-    cb->writeCodeBuffer( { "cbr_eq ", cc, " -> @", end, ", @", rhs } );
+    mustache lhsCode {
+        {
+            "i2i {left} => {result}",
+            "comp {r_false}, {left} => {cc}",
+            "cbr_eq {cc} -> @{end}, @{rhs}",
+            "{rhs}:", // Otherwise, the entire expression is the result of the RHS
+        }
+    };
 
     // Otherwise, the entire expression is the result of the RHS
-    cb->writeCodeBuffer( { rhs, ":" } );
-    auto right = static_cast< std::string >( visit( ctx->right ) );
-    cb->writeCodeBuffer( { "i2i ", right, " => ", result } );
+    mustache rhsCode {
+        {
+            "i2i {right} => {result}",
+            "{end}:"
+        }
+    };
 
-    cb->writeCodeBuffer( { end, ":" } );
+    auto labels = cb->makeLabel( { "andEnd", "rhs", "" } );
+    auto result = cb->getFreshRegister();
+
+    dictionary replacements {
+        { "left", static_cast< std::string >( visit( ctx->left ) ) },
+        { "result", result },
+        { "r_false", cb->valuesScopesLookup( "false" ) },
+        { "cc", cb->getFreshCCRegister() },
+        { "end", labels[ 0 ] },
+        { "rhs", labels[ 1 ] },
+    };
+    
+    lhsCode.populate( replacements, *cb );
+
+    replacements[ "right" ] = static_cast< std::string >( visit( ctx->right ) );
+
+    rhsCode.populate( replacements, *cb );
 
     return result;
 }
@@ -336,26 +373,39 @@ elaborationVisitor::visitAndOp( titaniaParser::AndOpContext* ctx ) {
 Any
 elaborationVisitor::visitOrOp( titaniaParser::OrOpContext* ctx ) {
  
-    auto left = static_cast< std::string >( visit( ctx->left ) );
- 
-    auto r_false = cb->valuesScopesLookup( "false" );
+    mustache lhsCode {
+        {
+            "i2i {left} => {result}",
+            "comp {r_false}, {left} => {cc}",
+            "cbr_neq {cc} -> @{end}, @{rhs}",
+            "{rhs}:", // Otherwise, the entire expression is the result of the RHS
+        }
+    };
+
+    mustache rhsCode {
+        {
+            "i2i {right} => {result}",
+            "{end}:"
+        }
+    };
+
     auto labels = cb->makeLabel( { "orEnd", "rhs", "" } );
-    auto l_end = labels[ 0 ];
-    auto l_rhs = labels[ 1 ];
-    std::string result = cb->getFreshRegister();
+    auto result = cb->getFreshRegister();
 
-    // if the result of the LHS is true, the entire expression is true
-    auto cc = cb->getFreshCCRegister();
-    cb->writeCodeBuffer( { "i2i ", left, " => ", result } );
-    cb->writeCodeBuffer( { "comp ", r_false, ", ", left, " => ", cc } );
-    cb->writeCodeBuffer( { "cbr_neq ", cc, " -> @", l_end, ", @", l_rhs } );
+    dictionary replacements {
+        { "left", static_cast< std::string >( visit( ctx->left ) ) },
+        { "result", result },
+        { "r_false", cb->valuesScopesLookup( "false" ) },
+        { "cc", cb->getFreshCCRegister() },
+        { "end", labels[ 0 ] },
+        { "rhs", labels[ 1 ] },
+    };
+ 
+    lhsCode.populate( replacements, *cb );
 
-    // Otherwise, the entire expression is the result of the RHS
-    cb->writeCodeBuffer( { l_rhs, ":" } );
-    auto right = static_cast< std::string >( visit( ctx->right ) );
-    cb->writeCodeBuffer( { "i2i ", right, " => ", result } );
+    replacements[ "right" ] = static_cast< std::string >( visit( ctx->right ) );
 
-    cb->writeCodeBuffer( { l_end, ":" } );
+    rhsCode.populate( replacements, *cb );
 
     return result;
 }
@@ -508,7 +558,6 @@ elaborationVisitor::visitFieldAccess(titaniaParser::FieldAccessContext *ctx ) {
     cb->writeCodeBuffer( { "add ", base, ", ", r_offset, " => ", fieldLocation } );
 
     std::string result;
-
 
     if( asAddress ) {
         result = fieldLocation;
@@ -916,7 +965,7 @@ main( int argc, char** argv ) {
             std::cout << std::endl << std::endl;
             std::string baseFileName{ argv[ i ] };
             std::ofstream outFile{ baseFileName + ".iloc"s };
-            irGen.dumpCodeBuffer( std::cout );
+ //           irGen.dumpCodeBuffer( std::cout );
             irGen.dumpCodeBuffer( outFile );
             std::cout << std::endl;
         }
