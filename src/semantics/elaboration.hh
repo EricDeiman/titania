@@ -94,11 +94,11 @@ public:
     visitWhileDo( titaniaParser::WhileDoContext * ) override;
 
     std::ostream&
-    dumpCodeBuffer( std::ostream & );
+    dumpCodeBuffers( std::ostream & );
 
 private:
 
-    CodeBuffer globalCodeBuffer{ true };
+    CodeBuffer globalCodeBuffer{ "!", true };
     std::vector< CodeBuffer > fnCodeBuffers;
     CodeBuffer* cb;
 

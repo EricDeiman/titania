@@ -1,6 +1,7 @@
 #include "codebuffer.hh"
+#include <string>
 
-CodeBuffer::CodeBuffer( bool global ) {
+CodeBuffer::CodeBuffer( std::string id, bool global ) : name( id ) {
 
     // since zero is false, it will be handy to have in a register
     auto reg = getFreshRegister();
@@ -13,6 +14,11 @@ CodeBuffer::CodeBuffer( bool global ) {
 
     valuesScopes.back()[ "0" ] = reg;
     valuesScopes.back()[ "false" ] = reg;
+}
+
+std::string
+CodeBuffer::getName() {
+    return name;
 }
 
 std::string

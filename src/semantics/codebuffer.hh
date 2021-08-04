@@ -10,7 +10,7 @@
 class CodeBuffer {
 
 public:
-    CodeBuffer( bool = false );
+    CodeBuffer( std::string, bool = false );
     
     void
     writeCodeBuffer( std::vector< std::string > );
@@ -42,6 +42,9 @@ public:
 
     std::ostream&
     dumpCodeBuffer( std::ostream &os );
+
+    std::string
+    getName();
     
 
 
@@ -51,6 +54,8 @@ private:
     int registerNum = 0;
     int ccNum = 0;
     int labelSuffix = 0;
+
+    std::string name;
 
 };
 

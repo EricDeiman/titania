@@ -34,6 +34,8 @@ elaborationVisitor::visitFile( titaniaParser::FileContext* ctx ) {
     cb->writeCodeBuffer( { "hlt  # end the program" } );
     scopes.pop_back();
 
+    fnCodeBuffers.push_back( std::move( globalCodeBuffer ) );
+
     return "";
 }
 
@@ -824,13 +826,13 @@ elaborationVisitor::visitWhileDo( titaniaParser::WhileDoContext *ctx ) {
 
 Any
 elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionContext* ctx ) {
-    CodeBuffer fnCodeBuffer;
+    currentFnName = ctx->fnName->getText();
+
+    CodeBuffer fnCodeBuffer{ currentFnName };
     cb = &fnCodeBuffer;
 
     cb->writeCodeBuffer( { "# ................ function definition on line ", 
         to_str( ctx->getStart()->getLine() ) } );
-
-    currentFnName = ctx->fnName->getText();
 
     fnReturnReg = cb->getFreshRegister();
 
@@ -896,10 +898,10 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
 
 
 std::ostream&
-elaborationVisitor::dumpCodeBuffer( std::ostream &os ) {
-    globalCodeBuffer.dumpCodeBuffer( os );
-    
-    os << std::endl << std::endl;
+elaborationVisitor::dumpCodeBuffers( std::ostream &os ) {
+
+    std::sort( fnCodeBuffers.begin(), fnCodeBuffers.end(), 
+        []( auto a, auto b ){ return a.getName() < b.getName(); } );
 
     for( auto cb : fnCodeBuffers ) {
         cb.dumpCodeBuffer( os );
@@ -966,7 +968,7 @@ main( int argc, char** argv ) {
             std::string baseFileName{ argv[ i ] };
             std::ofstream outFile{ baseFileName + ".iloc"s };
  //           irGen.dumpCodeBuffer( std::cout );
-            irGen.dumpCodeBuffer( outFile );
+            irGen.dumpCodeBuffers( outFile );
             std::cout << std::endl;
         }
     }
