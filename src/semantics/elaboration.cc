@@ -27,7 +27,7 @@ elaborationVisitor::visitFile( titaniaParser::FileContext* ctx ) {
     cb->writeCodeBuffer( { "pushi 0  # phoney global return address" } );
     cb->writeCodeBuffer( { "pushi 0  # phoney global return value" } );
 
-    cb->writeCodeBuffer( { "i2i tos => rarp  # set up initial rarp" } );
+    cb->writeCodeBuffer( { "i2i rtos => rarp  # set up initial rarp" } );
 
     visitChildren( ctx );
 
@@ -210,7 +210,7 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
         {
             "push rarp",
             "pushi @{returnAddr}",
-            "i2i tos => rarp  # set up callee arp",
+            "i2i rtos => rarp  # set up callee arp",
         }
     }; 
 
@@ -467,7 +467,7 @@ elaborationVisitor::visitBoolLit( titaniaParser::BoolLitContext* ctx ) {
     }
     else {
         auto reg = cb->getFreshRegister();
-        cb->writeCodeBuffer( { "loadb ", value, " => ", reg } );
+        cb->writeCodeBuffer( { "loadi 1 => ", reg } );
         result = reg;
         if( memoizeExprs ) {
             cb->valuesScopes.back()[ value ] = reg;
@@ -681,7 +681,7 @@ elaborationVisitor::visitConstElem( titaniaParser::ConstElemContext* ctx ) {
         auto reg1 = cb->getFreshRegister();
 
         auto idSymbol = lookupId( id );
-        cb->writeCodeBuffer( { "inctos ", to_str( idSymbol.second.sizeInBytes ),
+        cb->writeCodeBuffer( { "incrtos ", to_str( idSymbol.second.sizeInBytes ),
             "  # make space for ", id
         });
 
@@ -711,7 +711,7 @@ elaborationVisitor::visitVarElem( titaniaParser::VarElemContext* ctx ) {
         auto reg1 = cb->getFreshRegister();
 
         auto idSymbol = lookupId( id );
-        cb->writeCodeBuffer( { "inctos ", to_str( idSymbol.second.sizeInBytes ),
+        cb->writeCodeBuffer( { "incrtos ", to_str( idSymbol.second.sizeInBytes ),
             "  # make space for ", id
         });
 

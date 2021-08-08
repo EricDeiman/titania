@@ -1,0 +1,78 @@
+[
+ {
+  "directory": "/home/eric/projects/ProcLang/code-name-titania/src/semantics",
+  "arguments": [
+   "g++",
+   "-std=c++17",
+   "-g",
+   "-I",
+   "../include",
+   "-I",
+   "../include/antlr4-runtime",
+   "-L",
+   "../lib",
+   "-c",
+   "-o",
+   "type.o",
+   "type.cc"
+  ],
+  "file": "type.cc"
+ },
+ {
+  "directory": "/home/eric/projects/ProcLang/code-name-titania/src/semantics",
+  "arguments": [
+   "g++",
+   "-std=c++17",
+   "-g",
+   "-I",
+   "../include",
+   "-I",
+   "../include/antlr4-runtime",
+   "-L",
+   "../lib",
+   "-c",
+   "-o",
+   "elaboration.o",
+   "elaboration.cc"
+  ],
+  "file": "elaboration.cc"
+ },
+ {
+  "directory": "/home/eric/projects/ProcLang/code-name-titania/src/semantics",
+  "arguments": [
+   "g++",
+   "-std=c++17",
+   "-g",
+   "-I",
+   "../include",
+   "-I",
+   "../include/antlr4-runtime",
+   "-L",
+   "../lib",
+   "-c",
+   "-o",
+   "codebuffer.o",
+   "codebuffer.cc"
+  ],
+  "file": "codebuffer.cc"
+ },
+ {
+  "directory": "/home/eric/projects/ProcLang/code-name-titania/src/semantics",
+  "arguments": [
+   "g++",
+   "-std=c++17",
+   "-g",
+   "-I",
+   "../include",
+   "-I",
+   "../include/antlr4-runtime",
+   "-L",
+   "../lib",
+   "-c",
+   "-o",
+   "mustache.o",
+   "mustache.cc"
+  ],
+  "file": "mustache.cc"
+ }
+]

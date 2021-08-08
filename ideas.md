@@ -133,3 +133,4 @@ To build an executable program, run:
     [] make code templates for x86-64 generation
     [] lower IR to x86-64, then...
     [] register allocation
+    [] make an iloc interpreter?

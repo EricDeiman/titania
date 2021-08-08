@@ -1,3 +1,6 @@
 *.o
 doit
+iloci
+*.cache
+../.cache/
 *.iloc*
