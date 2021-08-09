@@ -1,4 +1,8 @@
 // An interpreter for my variation of the iloc IR
+
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <fstream>
 #include <regex>
 #include <unordered_map>
@@ -7,10 +11,13 @@
 
 // For now, each function gets its own set of registers
 
-std::string regPat{ R"(r([\d]+|tos|arp))" };
-std::string celPat{ R"((.*#.*)?)" };  // comment to end of line
+std::string regC{ R"(r(\d+|tos|arp))" };
+std::string cel_{ R"((.*#.*)?)" };  // comment to end of line
+std::string immC{ R"((-?\d+|@\w+))" };  // an immediate can be a number or @identifier
+std::string com_{ " *, *" };
+std::string arw_{ " *=> *" };
 
-size_t *
+std::int64_t *
 getReg( std::string regSpec, State &state ) {
     if( regSpec == "tos" ) {
         return &state.tos;
@@ -24,20 +31,80 @@ getReg( std::string regSpec, State &state ) {
     }
 }
 
-void doAddOp( std::string line, State &state ) {}  // add and subtract
+std::int64_t
+getImm( std::string immSpec, State &state ) {
+    if( immSpec[ 0 ] == '@' ) {
+        auto id{ immSpec.substr( 1 ) };
+        return state.labelOffsets[ id ];
+    }
+    else {
+        return std::stoi( immSpec );
+    }
+}
+
+std::regex
+mkRX( std::vector< std::string > pattern ) {
+    std::string buff;
+
+    for( auto s : pattern ) {
+        buff += s;
+    }
+
+    buff += cel_;
+
+    return std::regex{ buff, std::regex::optimize };
+}
+
+void doAddOp( std::string line, State &state ) {   // add and subtract
+    auto add{ mkRX( { "add ", regC, com_, regC, arw_, regC } ) };
+    auto addi{ mkRX( { "addi ", regC, com_, immC, arw_, regC } ) };
+    auto sub{ mkRX( { "sub ", regC, com_, regC, arw_, regC} ) };
+    auto subi{ mkRX( { "subi ", regC, com_, immC, arw_, regC } ) };
+    std::smatch sm;
+
+    if( std::regex_match( line, sm, add ) ) {
+        auto reg1{ getReg( sm[ 1 ], state ) };
+        auto reg2{ getReg( sm[ 2 ], state ) };
+        auto dest{ getReg( sm[ 3 ], state ) };
+
+        *dest = *reg1 + *reg2;
+    }
+    else if( std::regex_match( line, sm, addi ) ) {
+        auto reg{ getReg( sm[ 1 ], state ) };
+        auto imm{ getImm( sm[ 2 ], state ) };
+        auto dst{ getReg( sm[ 3 ], state ) };
+
+        *dst = *reg + imm;
+    }
+    else if( std::regex_match( line, sm, sub ) ) {
+        auto reg1{ getReg( sm[ 1 ], state ) };
+        auto reg2{ getReg( sm[ 2 ], state ) };
+        auto dest{ getReg( sm[ 3 ], state ) };
+
+        *dest = *reg1 - *reg2;
+    }
+    else if( std::regex_match( line, sm, subi ) ) {
+        auto reg{ getReg( sm[ 1 ], state ) };
+        auto imm{ getImm( sm[ 2 ], state ) };
+        auto dst{ getReg( sm[ 3 ], state ) };
+
+        *dst = *reg - imm;
+    }
+
+}
 
 void doCall( std::string line, State &state ) {}  // call and return
 
 void doCbrOp( std::string line, State &state ) {}  // conditional branch op
 
-void doComp( std::string line, State &state ) {}  // compparison op
+void doComp( std::string line, State &state ) {}  // comparison op
 
 void doHlt( std::string line, State &state ) {
     state.running = false;
 }
 
 void doI2i( std::string line, State &state ) {
-    std::regex pat{ "i2i " + regPat + " => " + regPat + celPat,  std::regex::optimize };
+    auto pat{ mkRX( { "i2i ", regC, arw_, regC } ) };
     std::smatch sm;
 
     if( std::regex_match( line, sm, pat ) ) {
@@ -48,19 +115,28 @@ void doI2i( std::string line, State &state ) {
     }
 }
 
-void doJump( std::string line, State &state ) {}  // jump ops
+void doJump( std::string line, State &state ) {   // jump ops
+    auto jump{ mkRX( { "jump ", regC } ) };
+    std::smatch sm;
+
+    if( std::regex_match( line, sm, jump ) ) {
+        auto imm{ getImm( sm[ 1 ], state ) };
+
+        state.insrPtr = imm;
+    }
+}
 
 void doLoad( std::string line, State &state ) {
     // what instruction name was used?
-    std::regex pati{ R"(loadi ([\d]+) => )" + regPat + celPat,  std::regex::optimize };
-    std::regex pat{ "load " + regPat + " => " + regPat + celPat,  std::regex::optimize };
+    auto pati{ mkRX( { "loadi ", immC, arw_, regC } ) };
+    auto pat{ mkRX( { "load ", regC, arw_, regC } ) };
     std::smatch sm;
 
     if( std::regex_match( line, sm, pati ) ) {
-        auto imm{ std::stoi( sm[ 1 ] ) };
+        auto imm{ getImm( sm[ 1 ], state ) };
+        auto dst{ getReg( sm[ 2 ], state ) };
 
-        auto dest{ getReg( sm[ 2 ], state ) };
-        *dest = imm;
+        *dst = imm;
     }
     else if( std::regex_match( line, sm, pat ) ) {
         auto reg1{ getReg( sm[ 1 ], state ) };
@@ -70,36 +146,110 @@ void doLoad( std::string line, State &state ) {
     }
 }
 
-void doMultOp( std::string line, State &state ) {}  // mult, div, and mod
+void doMultOp( std::string line, State &state ) {    // mult, div, and mod
+    auto div{ mkRX( { "div ", regC, com_, regC, arw_, regC } ) };
+    auto mod{ mkRX( { "mod ", regC, com_, regC, arw_, regC } ) };
+    auto mult{ mkRX( { "mult ", regC, com_, regC, arw_, regC } ) };
+    auto multi{ mkRX( { "multi ", regC, com_, immC, arw_, regC } ) };
+    std::smatch sm;
+
+    if( std::regex_match( line, sm, div ) ) {
+        auto reg1{ getReg( sm[ 1 ], state ) };
+        auto reg2{ getReg( sm[ 2 ], state ) };
+        auto dest{ getReg( sm[ 3 ], state ) };
+
+        *dest = *reg1 / *reg2;
+    }
+    else if( std::regex_match( line, sm, mod ) ) {
+        auto reg1{ getReg( sm[ 1 ], state ) };
+        auto reg2{ getReg( sm[ 2 ], state ) };
+        auto dest{ getReg( sm[ 3 ], state ) };
+
+        *dest = *reg1 % *reg2;
+    }
+    else if( std::regex_match( line, sm, mult ) ) {
+        auto reg1{ getReg( sm[ 1 ], state ) };
+        auto reg2{ getReg( sm[ 2 ], state ) };
+        auto dest{ getReg( sm[ 3 ], state ) };
+
+        *dest = *reg1 * *reg2;
+    }
+    else if( std::regex_match( line, sm, multi ) ) {
+        auto reg{ getReg( sm[ 1 ], state ) };
+        auto imm{ getImm( sm[ 2 ], state) };
+        auto dst{ getReg( sm[ 3 ], state ) };
+
+        *dst = *reg * imm;
+    }
+}
 
 void doNot( std::string line, State &state ) {}
 
-void doPop( std::string line, State &state ) {}
+void doPop( std::string line, State &state ) {
+    auto popr{ mkRX( { "pop ", regC } ) };
+    auto pop_{ mkRX( { "pop" } ) };
+    std::smatch sm;
+
+    if( std::regex_match( line, sm, popr ) ) {
+        auto reg{ getReg( sm[ 1 ], state ) };
+
+        *reg = state.memory[ state.tos ];
+    }
+
+    state.tos--;
+}
 
 void doPush( std::string line, State &state ) {
-    std::regex pati{ R"(pushi ([\d]+))" + celPat,  std::regex::optimize };
-    std::regex pat{ "push " + regPat + celPat,  std::regex::optimize };
+    auto pati{ mkRX( { "pushi ", immC } ) };
+    auto pat{ mkRX( { "push ", regC } ) };
     std::smatch sm;
 
     if( std::regex_match( line, sm, pati ) ) {
-        auto imm{ std::stoi( sm[ 1 ] ) };
+        auto imm{ getImm( sm[ 1 ], state ) };
+
         state.memory[ state.tos++ ] = imm;
     }
     else if( std::regex_match( line, sm, pat ) ) {
         auto reg{ getReg( sm[ 1 ], state ) };
+
         state.memory[ state.tos++ ] = *reg;
     }
 }
 
-void doStore( std::string line, State &state ) {}
-
-void doTos( std::string line, State &state ) {
-    std::regex pat{ R"(intrtos ([\d]+))" + celPat,  std::regex::optimize }; 
+void doStore( std::string line, State &state ) {
+    auto pat{ mkRX( { "store ", regC, arw_, regC } ) };
+    auto patao{ mkRX( { "storeao ", regC, arw_, regC, com_, regC } ) };
     std::smatch sm;
 
     if( std::regex_match( line, sm, pat ) ) {
-        auto imm{ std::stoi( sm[ 1 ] ) };
-        state.tos += imm / 8;
+        auto src{ getReg( sm[ 1 ], state ) };
+        auto dst{ getReg( sm[ 2 ], state ) };
+
+        state.memory[ *dst ] = *src;
+    }
+    else if( std::regex_match( line, sm, patao ) ) {
+        auto src{ getReg( sm[ 1 ], state ) };
+        auto base{ getReg( sm[ 2 ], state ) };
+        auto off{ getReg( sm[ 3 ], state ) };
+
+        state.memory[ *base + *off ] = *src;
+    }
+}
+
+void doTos( std::string line, State &state ) {
+    auto pat{ mkRX( { "incrtos ", immC } ) }; 
+    std::smatch sm;
+
+    if( std::regex_match( line, sm, pat ) ) {
+        auto imm{ getImm( sm[ 1 ], state ) };
+        assert( imm == 1 || imm % 8 == 0 );
+
+        if( imm == 1 ) {
+            state.tos += imm;
+        }
+        else {
+            state.tos += imm / 8;
+        }
     }
 }
 
@@ -131,7 +281,6 @@ opTable {
     { "storeao", doStore },
     { "sub", doAddOp },
     { "subi", doAddOp },
-
 };
 
 void
@@ -139,6 +288,7 @@ run( std::vector< std::string > program, State &state ) {
 
     while( state.running ) {
         auto s{ program[ state.insrPtr ] };
+        state.insrPtr++;
         if( s[ 0 ] != '#' && s.find_first_of( ':' ) == std::string::npos ) {
             auto key = s.substr( 0, s.find_first_of( ' ' ) );
             ( opTable [ key ] )( s, state );

@@ -134,3 +134,4 @@ To build an executable program, run:
     [] lower IR to x86-64, then...
     [] register allocation
     [] make an iloc interpreter?
+    [] figure out what to do with comparisons

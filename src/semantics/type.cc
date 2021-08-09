@@ -221,6 +221,9 @@ typeVisitor::visitTypeAlias(titaniaParser::TypeAliasContext* ctx ) {
                 "invaid type ({name}) for alias",
                 sourceLine( ctx ) ) ) {
 
+            auto baseTypeSymbol = lookUp( aliasType.second.base ).second;
+            aliasType.second.sizeInBytes = baseTypeSymbol.sizeInBytes;
+
             scopes.back().insert( std::move( aliasType ) );
         }
     }

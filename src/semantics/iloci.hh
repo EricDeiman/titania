@@ -14,19 +14,19 @@ public:
     State( size_t regCount = 256, size_t memSize = 1024 ) : registers( regCount ), 
                                                             memory( memSize ) {}
 
-    std::vector< size_t >
+    std::vector< std::int64_t >
     registers;
 
-    std::vector< size_t >
+    std::vector< std::int64_t >
     memory;
 
     std::unordered_map< std::string, size_t >
     labelOffsets;
 
-    size_t
+    std::int64_t
     tos = 0;
 
-    size_t
+    std::int64_t
     arp = 0;
 
     bool
