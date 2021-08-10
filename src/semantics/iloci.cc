@@ -117,14 +117,22 @@ void doCall( std::string line, State &state ) {  // call and return
     auto rtrn{ mkRX( { "ret" } ) };
     std::smatch sm;
 
-    // how to save and restore registers for the functions?
-
     if( std::regex_match( line, sm, call ) ) {
         auto reg{ getReg( sm[ 1 ], state ) };
 
+        state.registersStack.push_back( std::move( state.registers ) );
+        state.registers.reserve( 255 );
+        state.registers[ 0 ] = 0;
+        state.registers[ 1 ] = 1;
+        state.ccregsStack.push_back( std::move( state.ccregs ) );
+        state.ccregs.reserve( 255 );
         state.insrPtr = *reg;
     }
     else if( std::regex_match( line, sm, rtrn ) ) {
+        state.registers = std::move( state.registersStack.back() );
+        state.ccregs = std::move( state.ccregsStack.back() );
+        state.registersStack.pop_back();
+        state.ccregsStack.pop_back();
         // use the arp to find the return address
         state.insrPtr = state.memory[ state.arp - 1 ];
     }

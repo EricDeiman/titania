@@ -18,11 +18,17 @@ public:
     std::vector< std::int64_t >
     registers;
 
+    std::vector< std::vector< std::int64_t > >
+    registersStack;
+
     std::vector< std::int64_t >
     memory;
 
     std::vector< int >
     ccregs;
+
+    std::vector< std::vector< int > >
+    ccregsStack;
 
     std::unordered_map< std::string, size_t >
     labelOffsets;

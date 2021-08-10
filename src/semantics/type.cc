@@ -54,12 +54,12 @@ typeVisitor::typeVisitor() {
     
     baseType.first = baseType.second.name = baseType.second.base = "integer";
     baseType.second.type = symbolType::builtin;
-    baseType.second.sizeInBytes = 8;
+    baseType.second.sizeInBytes = 1;  // was 8
     scopes.back().insert( std::move( baseType ) );
 
     baseType.first = baseType.second.name = baseType.second.base = "string";
     baseType.second.type = symbolType::builtin;
-    baseType.second.sizeInBytes = 16;  // a 64-bit length and a 64-bit pointer
+    baseType.second.sizeInBytes = 2;  // was 16  // a 64-bit length and a 64-bit pointer
     scopes.back().insert( std::move( baseType ) );
 
     baseType.first = baseType.second.name = baseType.second.base = "boolean";

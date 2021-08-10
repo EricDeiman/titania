@@ -70,7 +70,7 @@ elaborationVisitor::visitIdentifier( titaniaParser::IdentifierContext *ctx ) {
     }
     else {
         reg1 = cb->getFreshRegister();
-        cb->writeCodeBuffer( { "addi rapr, ", to_str( idSymbol.second.arpOffset ), 
+        cb->writeCodeBuffer( { "addi rarp, ", to_str( idSymbol.second.arpOffset ), 
             " => ", reg1 } );
         cb->valuesScopes.back()[ "@"+ id ] = reg1;
     }
