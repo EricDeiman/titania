@@ -1,0 +1,7 @@
+module irshowb
+    from
+        std use showb, showi
+begin
+    showb( false ) ;
+    showb( true ) ;
+end

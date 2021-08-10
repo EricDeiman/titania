@@ -34,7 +34,7 @@ public:
     labelOffsets;
 
     std::int64_t
-    tos = 0;
+    tos = -1;
 
     std::int64_t
     arp = 0;

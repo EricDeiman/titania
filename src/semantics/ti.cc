@@ -4,13 +4,15 @@
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
+#include <functional>
 #include <regex>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 
 #include "iloci.hh"
 
-// For now, each function gets its own set of registers
+// Helpers  ----------------------------------------------------------------------------
 
 std::string immC{ R"((-?\d+|@\w+))" };  // an immediate can be a number or @identifier
 std::string regC{ R"(r(\d+|tos|arp))" };
@@ -60,7 +62,7 @@ mkRX( std::vector< std::string > pattern ) {
 }
 
 std::string
-mkIRPat( std::vector< std::string > irs ) {
+mkIRAlt( std::vector< std::string > irs ) {
     std::string buffer{ '(' };
 
     for( auto i = 0; i < irs.size(); i++ ) {
@@ -70,10 +72,12 @@ mkIRPat( std::vector< std::string > irs ) {
         }
     }
 
-    buffer += ") ";
+    buffer += ") *";
 
     return buffer;
 }
+
+// Instruction implementations ---------------------------------------------------------
 
 void doAddOp( std::string line, State &state ) {   // add and subtract
     auto add{ mkRX( { "add ", regC, com_, regC, arw_, regC } ) };
@@ -139,8 +143,8 @@ void doCall( std::string line, State &state ) {  // call and return
 }
 
 void doCbrOp( std::string line, State &state ) {  // conditional branch op
-    auto pat{ mkIRPat( { "cbrneq", "cbreq" } ) };
-    auto cbr{ mkRX( { pat, ccC, srw_, immC, com_, immC } ) };
+    auto patC{ mkIRAlt( { "cbrneq", "cbreq" } ) };
+    auto cbr{ mkRX( { patC, ccC, srw_, immC, com_, immC } ) };
     std::smatch sm;
 
     if( std::regex_match( line, sm, cbr ) ) {
@@ -158,8 +162,8 @@ void doCbrOp( std::string line, State &state ) {  // conditional branch op
 }
 
 void doCmp( std::string line, State &state ) {   // comparison op
-    auto insrs{ mkIRPat( { "cmpeq", "cmpge", "cmpgt", "cmple", "cmplt", "cmpne", } ) };
-    auto ir{ mkRX( { insrs, regC, com_, regC, arw_, regC } ) };
+    auto insrC{ mkIRAlt( { "cmpeq", "cmpge", "cmpgt", "cmple", "cmplt", "cmpne", } ) };
+    auto ir{ mkRX( { insrC, regC, com_, regC, arw_, regC } ) };
     std::smatch sm;
 
     if( std::regex_match( line, sm, ir ) ) {
@@ -291,7 +295,9 @@ void doMultOp( std::string line, State &state ) {    // mult, div, and mod
     }
 }
 
-void doNot( std::string line, State &state ) {}
+void doNot( std::string line, State &state ) {
+    throw std::runtime_error( "'Not' is not implemented for line: " + line );
+}
 
 void doPop( std::string line, State &state ) {
     auto popr{ mkRX( { "pop ", regC } ) };
@@ -315,12 +321,31 @@ void doPush( std::string line, State &state ) {
     if( std::regex_match( line, sm, pati ) ) {
         auto imm{ getImm( sm[ 1 ], state ) };
 
-        state.memory[ state.tos++ ] = imm;
+        state.memory[ ++state.tos ] = imm;
     }
     else if( std::regex_match( line, sm, pat ) ) {
         auto reg{ getReg( sm[ 1 ], state ) };
 
-        state.memory[ state.tos++ ] = *reg;
+        state.memory[ ++state.tos ] = *reg;
+    }
+}
+
+void doShow( std::string line, State &state ) {
+    auto show{ mkRX( { mkIRAlt( { "showb", "showi", "shows" } ) } ) };
+    std::smatch sm;
+
+    if( std::regex_match( line, sm, show ) ) {
+        if( sm[ 1 ] == "showb" ) {
+            std::cout << ( state.memory[ state.tos ] ? "true" : "false" ) << std::endl;
+            state.memory[ state.tos ] = -2;  // replace the argument with return value
+        }
+        else if( sm[ 1 ] == "showi" ) {
+            std::cout << state.memory[ state.tos ] << std::endl;
+            state.memory[ state.tos ] = -1;  // replace the argument with return value
+        }
+        else if( sm[ 1 ] == "shows" ) {
+            throw std::runtime_error( "shows is not yet implemented" );
+        }
     }
 }
 
@@ -361,6 +386,7 @@ void doTos( std::string line, State &state ) {
     }
 }
 
+// Instruction dispatch ----------------------------------------------------------------
 
 std::unordered_map< std::string, void (*)( std::string, State & ) >
 opTable {
@@ -391,11 +417,16 @@ opTable {
     { "push", doPush },
     { "pushi", doPush },
     { "ret", doCall },
+    { "showb", doShow },
+    { "showi", doShow },
+    { "shows", doShow },
     { "store", doStore },
     { "storeao", doStore },
     { "sub", doAddOp },
     { "subi", doAddOp },
 };
+
+// Run the interpreter -----------------------------------------------------------------
 
 void
 run( std::vector< std::string > program, State &state ) {
@@ -442,7 +473,6 @@ prepare( std::istream &in ) {
         if( tmp.find_first_of( ':' ) != std::string::npos ) {
             state.labelOffsets[ tmp.substr( 0, tmp.length() - 1 ) ] = program.size();
         }
-
     }
 
     return std::make_tuple( program, state );

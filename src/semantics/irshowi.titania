@@ -1,0 +1,10 @@
+module showi
+
+    from
+        std use showi 
+
+begin
+
+    showi( showi( 42 ) ) ;
+
+end

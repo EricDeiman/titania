@@ -5,7 +5,7 @@ OBJS = type.o elaboration.o codebuffer.o mustache.o
 
 CXXFLAGS += -std=c++17 -g -I $(INCDIR) -I $(INCDIR)/antlr4-runtime -L $(LIBDIR)
 
-.DEFAULT_GOAL := doit
+.DEFAULT_GOAL := tc
 
 type.o : type.cc type.hh $(INCDIR)/titaniaBaseVisitor.h $(INCDIR)/titaniaParser.h \
 $(INCDIR)/titaniaLexer.h
@@ -17,7 +17,7 @@ codebuffer.o : codebuffer.cc codebuffer.hh
 
 mustache.o : mustache.cc mustache.hh
 
-doit : $(OBJS) $(LIBDIR)/libtitaniaParser.a
+tc : $(OBJS) $(LIBDIR)/libtitaniaParser.a
 	g++ $(CXXFLAGS) $(OBJS) -l titaniaParser -l antlr4-runtime -o $@
 
 .PHONY : clean scrub
@@ -26,4 +26,4 @@ clean :
 	rm -f *.o
 
 scrub : clean
-	rm -f doit
+	rm -f tc

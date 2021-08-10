@@ -216,7 +216,6 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
 
     mustache callPostcall{
         {
-            "call {fnReg}",
             "{returnAddr}:",
             "pop {fnResultReg}  # return value",
             "pop  # return address",
@@ -226,6 +225,7 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
         }
     };
 
+    std::vector< std::string >stdLib{ "showi", "showb", "shows" };
 
     auto fnId = ctx->name->getText();
 
@@ -235,14 +235,16 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
 
     std::string fnReg;
 
-    if( memoizeExprs && cb->valuesScopesCount( "@" + fnId ) > 0 ) {
-        fnReg = cb->valuesScopesLookup( "@" + fnId );
-    }
-    else {
-        fnReg = cb->getFreshRegister();
-        cb->writeCodeBuffer( { "loadi @", fnId, " => ", fnReg } );
-        if( memoizeExprs ) { 
-            cb->valuesScopes.back()[ "@" + fnId ] = fnReg;
+    if( std::find( stdLib.begin(), stdLib.end(), fnId ) == stdLib.end() ) {
+        if( memoizeExprs && cb->valuesScopesCount( "@" + fnId ) > 0 ) {
+            fnReg = cb->valuesScopesLookup( "@" + fnId );
+        }
+        else {
+            fnReg = cb->getFreshRegister();
+            cb->writeCodeBuffer( { "loadi @", fnId, " => ", fnReg } );
+            if( memoizeExprs ) { 
+                cb->valuesScopes.back()[ "@" + fnId ] = fnReg;
+            }
         }
     }
 
@@ -281,11 +283,18 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
         cb->writeCodeBuffer( { "push ", res } );
     }
 
+    if( std::find( stdLib.begin(), stdLib.end(), fnId ) != stdLib.end() ) {
+        // handle the primative functions here 
+        cb->writeCodeBuffer( { fnId } );
+    }
+    else {
+        cb->writeCodeBuffer( { "call ", fnReg } );
+    }
+
     auto fnResultReg = cb->getFreshRegister();
     dictionary replaceCallReturn{
         { "fnResultReg", fnResultReg },
         { "returnAddr", returnAddr },
-        { "fnReg", fnReg },
     };
 
     callPostcall.populate( replaceCallReturn, *cb );
