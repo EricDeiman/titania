@@ -12,6 +12,7 @@
 class State {
 public:
     State( size_t regCount = 256, size_t memSize = 1024 ) : registers( regCount ), 
+                                                            ccregs( regCount ),
                                                             memory( memSize ) {}
 
     std::vector< std::int64_t >
@@ -19,6 +20,9 @@ public:
 
     std::vector< std::int64_t >
     memory;
+
+    std::vector< int >
+    ccregs;
 
     std::unordered_map< std::string, size_t >
     labelOffsets;

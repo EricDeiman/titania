@@ -1,0 +1,11 @@
+module iriftest
+
+begin
+    
+    if 7 < 8 then
+        10 ;
+    else
+        11 ;
+    end
+
+end

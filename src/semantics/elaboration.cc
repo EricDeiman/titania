@@ -338,7 +338,7 @@ elaborationVisitor::visitAndOp( titaniaParser::AndOpContext* ctx ) {
         {
             "i2i {left} => {result}",
             "comp {r_false}, {left} => {cc}",
-            "cbr_eq {cc} -> @{end}, @{rhs}",
+            "cbreq {cc} -> @{end}, @{rhs}",
             "{rhs}:", // Otherwise, the entire expression is the result of the RHS
         }
     };
@@ -379,7 +379,7 @@ elaborationVisitor::visitOrOp( titaniaParser::OrOpContext* ctx ) {
         {
             "i2i {left} => {result}",
             "comp {r_false}, {left} => {cc}",
-            "cbr_neq {cc} -> @{end}, @{rhs}",
+            "cbrneq {cc} -> @{end}, @{rhs}",
             "{rhs}:", // Otherwise, the entire expression is the result of the RHS
         }
     };
@@ -421,22 +421,22 @@ elaborationVisitor::visitCompOp( titaniaParser::CompOpContext* ctx ) {
     std::string insr;
 
     if( op == "<" ) {
-        insr = "cmpLT";
+        insr = "cmplt";
     }
     else if( op == "<=" ) {
-        insr = "cmpLE";
+        insr = "cmple";
     }
     else if( op == "?=" ) {
-        insr = "cmpEQ";
+        insr = "cmpeq";
     }
     else if( op == "!=" ) {
-        insr = "cmpNE";
+        insr = "cmpne";
     }
     else if( op == ">=" ) {
-        insr = "cmpGE";
+        insr = "cmpge";
     }
     else {
-        insr = "cmpGT";
+        insr = "cmpgt";
     }
 
     std::string result;
@@ -495,7 +495,7 @@ elaborationVisitor::visitArithmaticIf( titaniaParser::ArithmaticIfContext *ctx )
     auto cc = cb->getFreshCCRegister();
 
     cb->writeCodeBuffer( { "comp ", test, ", ",  r_false, " => ", cc } );
-    cb->writeCodeBuffer( { "cbr_neq ", cc, " -> @", consqPart, ", @", altrnPart } );
+    cb->writeCodeBuffer( { "cbrneq ", cc, " -> @", consqPart, ", @", altrnPart } );
 
     cb->writeCodeBuffer( { consqPart, ":" } );
 
@@ -752,7 +752,7 @@ elaborationVisitor::visitIfThen( titaniaParser::IfThenContext *ctx ) {
 
 
     cb->writeCodeBuffer( { "comp ", test, ", ",  r_false, " => ", cc } );
-    cb->writeCodeBuffer( { "cbr_neq ", cc, " -> @", thenPart, ", @", 
+    cb->writeCodeBuffer( { "cbrneq ", cc, " -> @", thenPart, ", @", 
         ( hasElseBody ? elsePart : endIf ) } );
 
     cb->writeCodeBuffer( { thenPart, ":" } );
@@ -801,7 +801,7 @@ elaborationVisitor::visitWhileDo( titaniaParser::WhileDoContext *ctx ) {
     auto test1 = static_cast< std::string >( visit( ctx->test ) );
     auto cc1 = cb->getFreshCCRegister();
     cb->writeCodeBuffer( { "comp ", test1, ", ",  r_false, " => ", cc1 } );
-    cb->writeCodeBuffer( { "cbr_neq ", cc1, " -> @", whileBody, ", @", whileEnd } ); 
+    cb->writeCodeBuffer( { "cbrneq ", cc1, " -> @", whileBody, ", @", whileEnd } ); 
     cb->writeCodeBuffer( { whileBody, ":" } );
 
     std::unordered_map< std::string, std::string > valuesMap;
@@ -816,7 +816,7 @@ elaborationVisitor::visitWhileDo( titaniaParser::WhileDoContext *ctx ) {
     auto test2 = static_cast< std::string >( visit( ctx->test ) );
     auto cc2 = cb->getFreshCCRegister();
     cb->writeCodeBuffer( { "comp ", test2, ", ",  r_false, " => ", cc2 } );
-    cb->writeCodeBuffer( { "cbr_neq ", cc2, " -> @", whileBody, ", @", whileEnd } ); 
+    cb->writeCodeBuffer( { "cbrneq ", cc2, " -> @", whileBody, ", @", whileEnd } ); 
     cb->writeCodeBuffer( { whileEnd, ":" } );
 
     memoizeExprs = oldMemoize;

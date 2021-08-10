@@ -5,17 +5,21 @@
 #include <cstdint>
 #include <fstream>
 #include <regex>
+#include <string>
 #include <unordered_map>
 
 #include "iloci.hh"
 
 // For now, each function gets its own set of registers
 
-std::string regC{ R"(r(\d+|tos|arp))" };
-std::string cel_{ R"((.*#.*)?)" };  // comment to end of line
 std::string immC{ R"((-?\d+|@\w+))" };  // an immediate can be a number or @identifier
-std::string com_{ " *, *" };
+std::string regC{ R"(r(\d+|tos|arp))" };
+std::string ccC{ R"(cc(\d+))" };
+
 std::string arw_{ " *=> *" };
+std::string srw_{ " *-> *" };
+std::string cel_{ R"((.*#.*)?)" };  // comment to end of line
+std::string com_{ " *, *" };
 
 std::int64_t *
 getReg( std::string regSpec, State &state ) {
@@ -55,6 +59,22 @@ mkRX( std::vector< std::string > pattern ) {
     return std::regex{ buff, std::regex::optimize };
 }
 
+std::string
+mkIRPat( std::vector< std::string > irs ) {
+    std::string buffer{ '(' };
+
+    for( auto i = 0; i < irs.size(); i++ ) {
+        buffer += irs[ i ];
+        if( i < irs.size() - 1 ) {
+            buffer += "|";
+        }
+    }
+
+    buffer += ") ";
+
+    return buffer;
+}
+
 void doAddOp( std::string line, State &state ) {   // add and subtract
     auto add{ mkRX( { "add ", regC, com_, regC, arw_, regC } ) };
     auto addi{ mkRX( { "addi ", regC, com_, immC, arw_, regC } ) };
@@ -90,14 +110,88 @@ void doAddOp( std::string line, State &state ) {   // add and subtract
 
         *dst = *reg - imm;
     }
-
 }
 
-void doCall( std::string line, State &state ) {}  // call and return
+void doCall( std::string line, State &state ) {  // call and return
+    auto call{ mkRX( { "call ", regC } ) };
+    auto rtrn{ mkRX( { "ret" } ) };
+    std::smatch sm;
 
-void doCbrOp( std::string line, State &state ) {}  // conditional branch op
+    // how to save and restore registers for the functions?
 
-void doComp( std::string line, State &state ) {}  // comparison op
+    if( std::regex_match( line, sm, call ) ) {
+        auto reg{ getReg( sm[ 1 ], state ) };
+
+        state.insrPtr = *reg;
+    }
+    else if( std::regex_match( line, sm, rtrn ) ) {
+        // use the arp to find the return address
+        state.insrPtr = state.memory[ state.arp - 1 ];
+    }
+}
+
+void doCbrOp( std::string line, State &state ) {  // conditional branch op
+    auto pat{ mkIRPat( { "cbrneq", "cbreq" } ) };
+    auto cbr{ mkRX( { pat, ccC, srw_, immC, com_, immC } ) };
+    std::smatch sm;
+
+    if( std::regex_match( line, sm, cbr ) ) {
+        auto cc{ std::stoi( sm[ 2 ] ) };
+        auto d1{ getImm( sm[ 3 ], state ) };
+        auto d2{ getImm( sm[ 4 ], state ) };
+
+        if( sm[ 1 ] == "cbrneq" ) {
+            state.insrPtr = d1;
+        }
+        else if( sm[ 1 ] == "cbreq" ) {
+            state.insrPtr = d2;
+        }
+    }
+}
+
+void doCmp( std::string line, State &state ) {   // comparison op
+    auto insrs{ mkIRPat( { "cmpeq", "cmpge", "cmpgt", "cmple", "cmplt", "cmpne", } ) };
+    auto ir{ mkRX( { insrs, regC, com_, regC, arw_, regC } ) };
+    std::smatch sm;
+
+    if( std::regex_match( line, sm, ir ) ) {
+        auto reg1{ getReg( sm[ 2 ], state ) };
+        auto reg2{ getReg( sm[ 3 ], state ) };
+        auto reg3{ getReg( sm[ 4 ], state ) };
+
+        if( sm[ 1 ] == "cmpeq" ) {
+            *reg3 = ( *reg1 == *reg2 ) ? 1 : 0;
+        }
+        else if( sm[ 1 ] == "cmpge" ) {
+            *reg3 = ( *reg1 >= *reg2 ) ? 1 : 0;
+        }
+        else if( sm[ 1 ] == "cmpgt" ) {
+            *reg3 = ( *reg1 > *reg2 ) ? 1 : 0;
+        }
+        else if( sm[ 1 ] == "cmple" ) {
+            *reg3 = ( *reg1 <= *reg2 ) ? 1 : 0;
+        }
+        else if( sm[ 1 ] == "cmplt" ) {
+            *reg3 = ( *reg1 < *reg2 ) ? 1 : 0;
+        }
+        else if( sm[ 1 ] == "cmpne" ) {
+            *reg3 = ( *reg1 != *reg2 ) ? 1 : 0;
+        }
+    }
+}
+
+void doComp( std::string line, State &state ) {  // comparison op
+    auto comp{ mkRX( { "comp ", regC, com_, regC, arw_, ccC } ) };
+    std::smatch sm;
+
+    if( std::regex_match( line, sm, comp ) ) {
+        auto reg1{ getReg( sm[ 1 ], state ) };
+        auto reg2{ getReg( sm[ 2 ], state ) };
+        auto cc{ std::stoi( sm[ 3 ] ) };
+
+        state.ccregs[ cc ] = ( *reg1 == *reg2 ) ? 1 : 0;
+    }
+}
 
 void doHlt( std::string line, State &state ) {
     state.running = false;
@@ -117,9 +211,15 @@ void doI2i( std::string line, State &state ) {
 
 void doJump( std::string line, State &state ) {   // jump ops
     auto jump{ mkRX( { "jump ", regC } ) };
+    auto jumpi{ mkRX( { "jumpi ", immC } ) };
     std::smatch sm;
 
     if( std::regex_match( line, sm, jump ) ) {
+        auto reg{ getReg( sm[ 1 ], state ) };
+
+        state.insrPtr = *reg;
+    }
+    else if( std::regex_match( line, sm, jumpi ) ) {
         auto imm{ getImm( sm[ 1 ], state ) };
 
         state.insrPtr = imm;
@@ -259,8 +359,14 @@ opTable {
     { "add", doAddOp },
     { "addi", doAddOp },
     { "call", doCall },
-    { "cbr_eq", doCbrOp },
-    { "cbr_neq", doCbrOp },
+    { "cbreq", doCbrOp },
+    { "cbrneq", doCbrOp },
+    { "cmpeq", doCmp },
+    { "cmpge", doCmp },
+    { "cmpgt", doCmp },
+    { "cmple", doCmp },
+    { "cmplt", doCmp },
+    { "cmpne", doCmp },
     { "comp", doComp },
     { "div", doMultOp },
     { "hlt", doHlt },
@@ -326,7 +432,7 @@ prepare( std::istream &in ) {
         program.push_back( tmp );
 
         if( tmp.find_first_of( ':' ) != std::string::npos ) {
-            state.labelOffsets[ tmp.substr( 0, tmp.length() - 1 ) ] = program.size() + 1;
+            state.labelOffsets[ tmp.substr( 0, tmp.length() - 1 ) ] = program.size();
         }
 
     }

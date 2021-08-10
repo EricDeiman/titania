@@ -4,16 +4,20 @@
 CodeBuffer::CodeBuffer( std::string id, bool global ) : name( id ) {
 
     // since zero is false, it will be handy to have in a register
-    auto reg = getFreshRegister();
+    auto freg = getFreshRegister();
+    auto treg = getFreshRegister();
 
     if( global ) {
-        codeBuffer.push_back( "loadi 0 => " + reg );
+        codeBuffer.push_back( "loadi 0 => " + freg );
+        codeBuffer.push_back( "loadi 1 => " + treg );
     }
 
     valuesScopes.push_back( valuesMap );
 
-    valuesScopes.back()[ "0" ] = reg;
-    valuesScopes.back()[ "false" ] = reg;
+    valuesScopes.back()[ "0" ] = freg;
+    valuesScopes.back()[ "false" ] = freg;
+    valuesScopes.back()[ "1" ] = treg;
+    valuesScopes.back()[ "true" ] = treg;
 }
 
 std::string
