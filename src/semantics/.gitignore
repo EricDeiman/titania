@@ -1,6 +1,7 @@
 *.o
 doit
 iloci
+tc
 *.cache
 ../.cache/
 *.iloc*

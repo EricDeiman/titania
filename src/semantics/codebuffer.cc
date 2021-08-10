@@ -8,6 +8,7 @@ CodeBuffer::CodeBuffer( std::string id, bool global ) : name( id ) {
     auto treg = getFreshRegister();
 
     if( global ) {
+        codeBuffer.push_back( "!:" );
         codeBuffer.push_back( "loadi 0 => " + freg );
         codeBuffer.push_back( "loadi 1 => " + treg );
     }
@@ -101,3 +102,12 @@ CodeBuffer::dumpCodeBuffer( std::ostream &os ) {
     return os;
 }
 
+std::vector< std::string >*
+CodeBuffer::getBuffer() {
+    return &codeBuffer;
+}
+
+std::vector< BasicBlock >&
+CodeBuffer::getBlocks() {
+    return basicBlocks;
+}

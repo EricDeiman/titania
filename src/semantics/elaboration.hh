@@ -96,6 +96,9 @@ public:
     std::ostream&
     dumpCodeBuffers( std::ostream & );
 
+    std::vector< CodeBuffer >&&
+    getCodeBuffers();
+
 private:
 
     CodeBuffer globalCodeBuffer{ "!", true };

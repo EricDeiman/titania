@@ -102,7 +102,7 @@ To build an ANTLR grammar to C++ code, run:
    antlr4 -Dlanguage=Cpp tatania.g4
 
 To build an executable program, run:
-    g++ -std=c++17 -I ../include/antlr4-runtime/ *.cpp *.cc ../lib/libantlr4-runtime.a -o main
+    g++ -std=c++17 -I ../include/antlr4-runtime/ \*.cpp \*.cc ../lib/libantlr4-runtime.a -o main
 
 # todo
     [x] the type checker doesn't check the body of while/do

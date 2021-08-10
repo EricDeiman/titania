@@ -7,6 +7,8 @@
 #include <vector>
 #include <unordered_map>
 
+#include "basicblock.hh"
+
 class CodeBuffer {
 
 public:
@@ -45,8 +47,12 @@ public:
 
     std::string
     getName();
-    
 
+    std::vector< std::string >*
+    getBuffer();
+
+    std::vector< BasicBlock >&
+    getBlocks();
 
 private:
     std::vector< std::string > codeBuffer;
@@ -57,6 +63,7 @@ private:
 
     std::string name;
 
+    std::vector< BasicBlock >basicBlocks;
 };
 
 #endif

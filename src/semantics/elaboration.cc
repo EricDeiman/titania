@@ -1,5 +1,6 @@
 
 #include "elaboration.hh"
+#include "ir.hh"
 #include "mustache.hh"
 #include "type.hh"
 
@@ -21,7 +22,6 @@ elaborationVisitor::visitFile( titaniaParser::FileContext* ctx ) {
 
     // set up the stack to look like a function call has been made even though there
     // isn't one
-
     cb->writeCodeBuffer( { "pushi 0  # phoney global access link" } );
     cb->writeCodeBuffer( { "pushi 0  # phoney global ARP" } );
     cb->writeCodeBuffer( { "pushi 0  # phoney global return address" } );
@@ -905,6 +905,10 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
 
 // -------------------------------------------------------------------------------------
 
+std::vector< CodeBuffer >&&
+elaborationVisitor::getCodeBuffers() {
+    return std::move( fnCodeBuffers );
+}
 
 std::ostream&
 elaborationVisitor::dumpCodeBuffers( std::ostream &os ) {
@@ -971,13 +975,18 @@ main( int argc, char** argv ) {
 
         if( typecheck.errorCount() == 0 ) {
             std::cout << "elaborating " << std::endl;
+ 
             elaborationVisitor irGen{ typecheck };
             irGen.visit( tree );
-            std::cout << std::endl << std::endl;
+ 
             std::string baseFileName{ argv[ i ] };
             std::ofstream outFile{ baseFileName + ".iloc"s };
- //           irGen.dumpCodeBuffer( std::cout );
             irGen.dumpCodeBuffers( outFile );
+ 
+            IR ir{ irGen.getCodeBuffers() };
+            ir.mkBasicBlocks();
+            ir.dumpBasicBlocks( std::cout );
+
             std::cout << std::endl;
         }
     }
