@@ -102,7 +102,7 @@ To build an ANTLR grammar to C++ code, run:
    antlr4 -Dlanguage=Cpp tatania.g4
 
 To build an executable program, run:
-   g++ -std=c++17 -I ../include/antlr4-runtime/ *.cpp *.cc ../lib/libantlr4-runtime.a -o main
+    g++ -std=c++17 -I ../include/antlr4-runtime/ *.cpp *.cc ../lib/libantlr4-runtime.a -o main
 
 # todo
     [x] the type checker doesn't check the body of while/do
@@ -128,10 +128,11 @@ To build an executable program, run:
         them: source program value or compiler generated temporary; known or unknown value;
         constant or not)
     [] break the IR into basic blocks
-    [] abstract functions into their own container
+    [x] abstract functions into their own container (i modified code buffer)
     [x] make code templates for IR generation (that didn't help as much as I thought it would)
-    [] make code templates for x86-64 generation
+    [] make code templates for x86-64 generation?
     [] lower IR to x86-64, then...
     [] register allocation
-    [] make an iloc interpreter?
-    [] figure out what to do with comparisons
+    [x] make an iloc interpreter?
+    [x] figure out what to do with comparisons
+    [] implement strings
