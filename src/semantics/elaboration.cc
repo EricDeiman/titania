@@ -954,41 +954,48 @@ main( int argc, char** argv ) {
 
     using namespace antlr4;
 
-    typeVisitor typecheck;
-
     for( auto i = 1; i < argc; i++ ) {
         std::cout << "typechecking file " << argv[ i ] << std::endl;
 
-        std::ifstream file{ argv[ i ] };
-        ANTLRInputStream input( file );
-        titaniaLexer lexer( &input );
-        CommonTokenStream tokens( &lexer );
+        std::vector< CodeBuffer > ir;
 
-        tokens.fill();
+        // put these in a block to manage memory
+        {
+            std::ifstream file{ argv[ i ] };
+            ANTLRInputStream input( file );
+            titaniaLexer lexer( &input );
+            CommonTokenStream tokens( &lexer );
 
-        titaniaParser parser( &tokens );
-        tree::ParseTree* tree = parser.file();
+            tokens.fill();
 
-        typecheck.visit( tree );
+            titaniaParser parser( &tokens );
+            tree::ParseTree* tree = parser.file();
 
-        // typecheck.dumpSymbols( std::cout );
+            typeVisitor typecheck;
+            typecheck.visit( tree );
 
-        if( typecheck.errorCount() == 0 ) {
-            std::cout << "elaborating " << std::endl;
- 
-            elaborationVisitor irGen{ typecheck };
-            irGen.visit( tree );
- 
-            std::string baseFileName{ argv[ i ] };
-            std::ofstream outFile{ baseFileName + ".iloc"s };
-            irGen.dumpCodeBuffers( outFile );
- 
-            IR ir{ irGen.getCodeBuffers() };
-            ir.mkBasicBlocks();
-            ir.dumpBasicBlocks( std::cout );
+            // typecheck.dumpSymbols( std::cout );
 
-            std::cout << std::endl;
+            if( typecheck.errorCount() == 0 ) {
+                std::cout << "elaborating " << std::endl;
+     
+                elaborationVisitor irGen{ typecheck };
+                irGen.visit( tree );
+     
+                std::string baseFileName{ argv[ i ] };
+                std::ofstream outFile{ baseFileName + ".iloc"s };
+                irGen.dumpCodeBuffers( outFile );
+    
+                ir = irGen.getCodeBuffers(); 
+            }
         }
+
+        IR opt{ std::move( ir ) };
+        opt.mkBasicBlocks();
+        opt.dumpBasicBlocks( std::cout );
+
+        std::cout << std::endl;
+
     }
 
     return 0;
