@@ -274,7 +274,6 @@ IR::testLocalValueNumbering( std::string fnName,
                              std::string blockName, 
                              std::ostream &os ) {
 
-
     for( auto &x : fnBuffers ) {
         if( x.getName() == fnName ) {
             for( auto &b : x.basicBlocks ) {
@@ -287,8 +286,6 @@ IR::testLocalValueNumbering( std::string fnName,
             break;
         }
     }
-
-
 
     return os;
 }

@@ -1,0 +1,16 @@
+module lvntest
+
+    var
+        a : integer <- 2 ;
+        b : integer <- 3 ;
+        c : integer <- 4 ;
+        d : integer <- 5
+
+begin
+
+    a <- b + c ;
+    b <- a - d ;
+    c <- b + c ;
+    d <- a - d ;
+
+end

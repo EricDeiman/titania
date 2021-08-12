@@ -694,10 +694,10 @@ elaborationVisitor::visitConstElem( titaniaParser::ConstElemContext* ctx ) {
             "  # make space for ", id
         });
 
-        cb->writeCodeBuffer( { "loadi ", to_str( idSymbol.second.arpOffset), 
+        cb->writeCodeBuffer( { "addi rarp, ", to_str( idSymbol.second.arpOffset), 
             " => ", reg1, "  # @", id, " = ", to_str( idSymbol.second.arpOffset)
         } );
-        cb->writeCodeBuffer( { "storeao ", expr, " => rarp, ", reg1 } );
+        cb->writeCodeBuffer( { "store ", expr, " => ", reg1 } );
 
         if( memoizeExprs ) {
             cb->valuesScopes.back()[ "@" + id ] = reg1;
@@ -727,10 +727,10 @@ elaborationVisitor::visitVarElem( titaniaParser::VarElemContext* ctx ) {
         if( ctx->expression() ) {
             auto expr = static_cast< std::string >( visit( ctx->expression() ) );
             
-            cb->writeCodeBuffer( { "loadi ", to_str( idSymbol.second.arpOffset ),
+            cb->writeCodeBuffer( { "addi rarp, ", to_str( idSymbol.second.arpOffset ),
                  " => ", reg1, "  # @", id, " = ", to_str( idSymbol.second.arpOffset )
             } );
-            cb->writeCodeBuffer( { "storeao ", expr, " => rarp, ", reg1 } );
+            cb->writeCodeBuffer( { "store ", expr, " => ", reg1 } );
 
             if( memoizeExprs ) {
                 cb->valuesScopes.back()[ "@" + id ] = reg1;
