@@ -2,6 +2,9 @@
 doit
 iloci
 tc
+ti
+testlvn
+*.out
 *.cache
 ../.cache/
 *.iloc*

@@ -1,5 +1,130 @@
+#include <algorithm>
+#include <cstddef>
+#include <regex>
+#include <string>
+#include <unordered_map>
 
+#include "ilocpat.hh"
 #include "ir.hh"
+
+using namespace std::literals::string_literals;
+
+// llvnMeta -----------------------------------------------------------------------------
+
+int
+LvnMeta::lookUp( std::string k ) {
+    if( table.count( k ) == 0 ) {
+        return -1;
+    }
+
+    return table[ k ];
+}
+
+size_t
+LvnMeta::add( std::string k ) {
+    table[ k ] = number;
+    chkCap();
+    numToName[ number ].push_back( k );
+    return number++;
+}
+
+void
+LvnMeta::clearDest( std::string k ) {
+    for( auto &n : numToName ) {
+        for( auto i = n.begin(); i != n.end(); i++ ) {
+            if( *i == k ) {
+                *i = "";
+            }
+        }
+    }
+}
+
+size_t
+LvnMeta::set( std::string k, size_t v ) {
+    table[ k ] = v;
+    chkCap( v );
+
+    // k is getting assign a new value.  Before adding the new addignment, remove k
+    // from any other assignment
+    clearDest( k );
+    numToName[ v ].push_back( k );
+
+    return v;
+}
+
+std::string
+LvnMeta::lookUpName( size_t val ) {
+    auto vec{ numToName[ val ] };
+
+    for( auto n : vec ) {
+        if( n[ 0 ] == 'r' ) {
+            return n;
+        }
+    }
+
+    return ""s;
+}
+
+std::string
+LvnMeta::replaceWithI2i( std::string key ) {
+    auto pat{ R"((\d+)\w+(\d+))" };
+    std::regex rx{ pat, std::regex::optimize };
+    std::smatch mg;
+
+    if( std::regex_match( key, mg, rx ) ) {
+        auto left{ std::stoi( mg[ 1 ] ) };
+        auto right{ std::stoi( mg[ 2 ] ) };
+
+        auto lname{ lookUpName( left ) };
+        auto rname{ lookUpName( right ) };
+
+        return "i2i " + lname + " => " + rname;
+    }
+
+    return key;
+}
+
+std::ostream &
+LvnMeta::dumpLvn( std::ostream &os ) {
+
+    os << "local value numbering internals" << std::endl;
+    
+    os << "\tlvn table" << std::endl;
+    for( auto i : table ) {
+        os << "\t\t" << i.first << " " << i.second << std::endl;
+    }
+
+    os << "\tnumber to name table" << std::endl;
+    for( auto i = 0; i < numToName.size(); i++ ) {
+        os << "\t\t" << i << " ";
+        for( auto j : numToName[ i ] ) {
+            os << j << ", ";
+        }
+        os << std::endl;
+    }
+
+    return os;
+}
+
+void
+LvnMeta::chkCap( int c ) {
+    int target;
+
+    if( c == -1 ) {
+        target = number;
+    }
+    else {
+        target = c;
+    }
+
+    if( numToName.size() == target ) {
+        numToName.resize( numToName.size() + capFactor );
+    }
+
+}
+
+
+// IR -----------------------------------------------------------------------------------
 
 void
 IR::mkBasicBlocks() {
@@ -10,7 +135,6 @@ IR::mkBasicBlocks() {
 
 std::ostream&
 IR::dumpBasicBlocks( std::ostream &os ) {
-
     for( auto &b : fnBuffers ) {
 
         os << b.getName() << std::endl;
@@ -18,12 +142,13 @@ IR::dumpBasicBlocks( std::ostream &os ) {
             os << "\t" << bb.name << " start: " << bb.startIdx + 1 << ", end: " 
                 << bb.endIdx + 1 << std::endl;
             for( auto s : bb.codeBlock ) {
+
                 os << "\t\t" << s << std::endl;
             }
         }
     }
 
-    return os;
+        return os;
 }
 
 void
@@ -45,13 +170,14 @@ IR::mkBasicBlock( CodeBuffer &code ) {
                 // and start a new one
                 bb.codeBlock.reserve( 1 );
                 bb.codeBlock.push_back( label );
-                bb.name = label;
+                bb.name = id;
                 bb.startIdx = i;
                 bb.endIdx = 0;
             }
             else {
                 bb.codeBlock.push_back( buffer->at( i ) );
-                bb.name = buffer->at( i );
+                auto label{ buffer->at( i ) };
+                bb.name = label.substr( 0, label.find_first_of( ':' ) );
                 bb.startIdx = i;
                 blockStarted = true;
             }
@@ -74,15 +200,95 @@ IR::mkBasicBlock( CodeBuffer &code ) {
 bool
 IR::isJumpInsr( std::string s ) {
 
-    std::vector< std::string > jumpInsrs { { "cbrneq", "cbreq", "jump", "jumpi", "hlt", 
-        "call", "ret", "showi", "showb", "shows" } };
+    // SORTED!
+    std::vector< std::string > jumpInsrs { { 
+        "call",
+        "cbreq",
+        "cbrneq",
+        "hlt",
+        "jump",
+        "jumpi",
+        "ret",
+        "showb",
+        "showi",
+        "shows" 
+    } };
 
-    for( auto i : jumpInsrs ) {
-        auto x = s.find( i );
-        if( x != std::string::npos && x == 0 ) {
-            return true;
-        }
+    if( s[ 0 ] == '#' ) {
+        return false;
+    }
+
+    auto insr{ s.substr( 0, s.find_first_of( ' ' ) ) };
+
+    if( std::binary_search( jumpInsrs.begin(), jumpInsrs.end(), insr ) ) {
+        return true;
     }
 
     return false;
+}
+
+LvnMeta
+IR::localValueNumbering( BasicBlock &block ) {
+    LvnMeta lvn;
+
+    // find instructions of the form <op> <something>, <something> => <register>       
+    auto inst{ mkRX( { insrC, immOrRegC, com_, immOrRegC, arw_, regC } ) };
+    std::smatch mg;
+
+    for( auto &i : block.codeBlock ) {
+        if( std::regex_match( i, mg, inst ) ) {
+            std::string rator{ mg[ 1 ] };
+            std::string lrand{ mg[ 2 ] };
+            std::string rrand{ mg[ 3 ] };
+            std::string destn{ mg[ 4 ] };
+
+            auto llvn{ lvn.lookUp( lrand ) };
+            if( llvn == -1 ) {
+                llvn = lvn.add( lrand );
+            }
+
+            auto rlvn{ lvn.lookUp( rrand ) };
+            if( rlvn == -1 ) {
+                rlvn = lvn.add( rrand );
+            }
+
+            auto key{ std::to_string( llvn ) + rator + std::to_string( rlvn ) };
+            auto klvn{ lvn.lookUp( key ) };
+            if( klvn == -1 ) {
+                klvn = lvn.add( key );
+            }
+            else {
+                std::cout << "can replace line " << i << " with " << lvn.replaceWithI2i( key ) << std::endl;
+                // i.assign( lvn.replaceIns( key ) );
+            }
+
+            lvn.set( "r"s + destn, klvn );
+        }
+    }
+
+    return lvn;
+}
+
+std::ostream &
+IR::testLocalValueNumbering( std::string fnName, 
+                             std::string blockName, 
+                             std::ostream &os ) {
+
+
+    for( auto &x : fnBuffers ) {
+        if( x.getName() == fnName ) {
+            for( auto &b : x.basicBlocks ) {
+                if( b.name == blockName ) {
+                    auto lvn{ localValueNumbering( b ) };
+                    // lvn.dumpLvn( os );
+                    break;
+                }
+            }
+            break;
+        }
+    }
+
+
+
+    return os;
 }

@@ -12,7 +12,12 @@
 class CodeBuffer {
 
 public:
+    CodeBuffer() = default;
+
     CodeBuffer( std::string, bool = false );
+
+    CodeBuffer &
+    operator=( const CodeBuffer & ) = default;
     
     void
     writeCodeBuffer( std::vector< std::string > );
@@ -54,6 +59,8 @@ public:
     std::vector< BasicBlock >&
     getBlocks();
 
+    std::vector< BasicBlock >basicBlocks;
+
 private:
     std::vector< std::string > codeBuffer;
 
@@ -62,8 +69,6 @@ private:
     int labelSuffix = 0;
 
     std::string name;
-
-    std::vector< BasicBlock >basicBlocks;
 };
 
 #endif

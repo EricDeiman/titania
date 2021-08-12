@@ -116,7 +116,7 @@ To build an executable program, run:
     [x] the ir generator doesn't look at #ArithmaticIf
     [x] array decls should have a size component
     [] get the absolute address of variables and constants rather than offset from ARP
-    []  look up variables and constants in outer scopes
+    [] look up variables and constants in outer scopes
     [] what to do with non-interger-sized results
     [x] change function precall/prolouge/epilouge/postreturn--no need to reserve space
         for return value; callee pops args and pushes results
@@ -127,7 +127,18 @@ To build an executable program, run:
     [] abstract away from text representation of registers (keep interesting details about
         them: source program value or compiler generated temporary; known or unknown value;
         constant or not)
-    [] break the IR into basic blocks
+    [x] break the IR into basic blocks
+    [] manipulate basic blocks
+        ## Local (in one basic block)
+        [] local value numbering
+        [] local constant folding
+        [] local expression identities (e.g., 0 + a = a, a - 0 = a, 1 x a = a)
+        [] tree-height balancing
+        ## Regional (between basic blocks)
+        [] Suprelocal value numbering
+        [] loop unrolling
+        ## Global (in an entire function)
+        ## Interprocedural (in the entire program)
     [x] abstract functions into their own container (i modified code buffer)
     [x] make code templates for IR generation (that didn't help as much as I thought it would)
     [] make code templates for x86-64 generation?
@@ -135,4 +146,5 @@ To build an executable program, run:
     [] register allocation
     [x] make an iloc interpreter?
     [x] figure out what to do with comparisons
-    [] implement strings
+    [] implement (literal) strings
+    [] add some way of measuring the benefit of optimizations

@@ -955,6 +955,9 @@ main( int argc, char** argv ) {
     using namespace antlr4;
 
     for( auto i = 1; i < argc; i++ ) {
+
+        std::string arg{ argv[  1 ] };
+
         std::cout << "typechecking file " << argv[ i ] << std::endl;
 
         std::vector< CodeBuffer > ir;
@@ -992,7 +995,8 @@ main( int argc, char** argv ) {
 
         IR opt{ std::move( ir ) };
         opt.mkBasicBlocks();
-        opt.dumpBasicBlocks( std::cout );
+        // opt.dumpBasicBlocks( std::cout );
+        // opt.testLocalValueNumbering( "id", "id", std::cout );
 
         std::cout << std::endl;
 

@@ -14,14 +14,7 @@
 
 // Helpers  ----------------------------------------------------------------------------
 
-std::string immC{ R"((-?\d+|@\w+))" };  // an immediate can be a number or @identifier
-std::string regC{ R"(r(\d+|tos|arp))" };
-std::string ccC{ R"(cc(\d+))" };
-
-std::string arw_{ " *=> *" };
-std::string srw_{ " *-> *" };
-std::string cel_{ R"((.*#.*)?)" };  // comment to end of line
-std::string com_{ " *, *" };
+#include "ilocpat.hh"
 
 std::int64_t *
 getReg( std::string regSpec, State &state ) {
@@ -46,19 +39,6 @@ getImm( std::string immSpec, State &state ) {
     else {
         return std::stoi( immSpec );
     }
-}
-
-std::regex
-mkRX( std::vector< std::string > pattern ) {
-    std::string buff;
-
-    for( auto s : pattern ) {
-        buff += s;
-    }
-
-    buff += cel_;
-
-    return std::regex{ buff, std::regex::optimize };
 }
 
 std::string
