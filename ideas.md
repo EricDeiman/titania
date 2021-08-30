@@ -130,8 +130,8 @@ To build an executable program, run:
     [x] break the IR into basic blocks
     [] manipulate basic blocks
         ## Local (in one basic block)
-        [] local value numbering
-        [] local constant folding
+        [x] local value numbering
+        [x] local constant folding
         [] local expression identities (e.g., 0 + a = a, a - 0 = a, 1 x a = a)
         [] tree-height balancing
         ## Regional (between basic blocks)

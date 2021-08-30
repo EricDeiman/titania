@@ -7,21 +7,31 @@
 #include <unordered_map>
 #include <vector>
 
-#include "codebuffer.hh"
 #include "basicblock.hh"
+#include "codebuffer.hh"
+#include "mredutil.hh"
+
+class LvnMetaDatum {
+public:
+    size_t valNumber;
+    bool constant;
+    int value;
+};
 
 class LvnMeta {
 public:
-    using lvnDict = std::unordered_map< std::string, size_t >;
+    using lvnDict = std::unordered_map< std::string, LvnMetaDatum >;
 
-    int
-    lookUp( std::string );
+    LvnMeta();
+
+    bool
+    lookUp( std::string, LvnMetaDatum & );
+
+    LvnMetaDatum
+    add( std::string, bool = false, int = 0 );
 
     size_t
-    add( std::string );
-
-    size_t
-    set( std::string, size_t );
+    set( std::string, size_t, bool = false, int = 0 );
 
     std::string
     replaceWithI2i( std::string );
@@ -29,17 +39,24 @@ public:
     std::ostream &
     dumpLvn( std::ostream & );
 
+    void
+    renameReg( std::string, std::string );
+
+    std::string
+    updateRegisters( std::string );
+
+    std::string
+    lookUpName( size_t );
+
 private:
     lvnDict table;
     size_t number = 0;
     static constexpr int capFactor = 10;
     std::vector< std::vector< std::string > > numToName{ capFactor };
+    std::vector< size_t >renameRegs;
 
     void
     chkCap( int = -1 );
-
-    std::string
-    lookUpName( size_t );
 
     void
     clearDest( std::string );
@@ -61,6 +78,9 @@ public:
     std::ostream&
     dumpBasicBlocks( std::ostream &os );
 
+    bool
+    isCommumative( std::string );
+
 private:
     std::vector< CodeBuffer >fnBuffers;
 
@@ -69,6 +89,21 @@ private:
 
     bool
     isJumpInsr( std::string );
+
+    static nullstream _nullstream;
+
+    bool
+    handleBinOp( LvnMeta &, std::string, std::string, std::string, std::string, std::string & );
+
+    bool
+    handleLoadiOp( LvnMeta &, std::string, std::string, std::string & );
+
+    std::vector< std::string >commumativeOp {
+        "add", 
+        "addi",
+        "mult", 
+        "multi",
+    };
 };
 
 #endif

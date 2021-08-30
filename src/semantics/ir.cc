@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cctype>
 #include <cstddef>
 #include <regex>
 #include <string>
@@ -11,40 +12,48 @@ using namespace std::literals::string_literals;
 
 // llvnMeta -----------------------------------------------------------------------------
 
-int
-LvnMeta::lookUp( std::string k ) {
-    if( table.count( k ) == 0 ) {
-        return -1;
+LvnMeta::LvnMeta() {
+    renameRegs.resize( 255 );
+    for( auto i = 0; i < renameRegs.size(); i++ ) {
+        renameRegs[ i ] = i;
     }
-
-    return table[ k ];
 }
 
-size_t
-LvnMeta::add( std::string k ) {
-    table[ k ] = number;
+bool
+LvnMeta::lookUp( std::string k, LvnMetaDatum &out ) {
+    if( table.count( k ) == 0 ) {
+        return false;
+    }
+
+    out = table[ k ];
+    return true;
+}
+
+LvnMetaDatum
+LvnMeta::add( std::string k, bool constant, int value ) {
+    LvnMetaDatum datum{ number, constant, value  };
+    table[ k ] = datum;
     chkCap();
     numToName[ number ].push_back( k );
-    return number++;
+    number++;
+    return datum;
 }
 
 void
 LvnMeta::clearDest( std::string k ) {
     for( auto &n : numToName ) {
-        for( auto i = n.begin(); i != n.end(); i++ ) {
-            if( *i == k ) {
-                *i = "";
-            }
+        if( std::find( n.begin(), n.end(), k ) != n.end() ) {
+            n.erase( std::remove( n.begin(), n.end(), k ) );
         }
     }
 }
 
 size_t
-LvnMeta::set( std::string k, size_t v ) {
-    table[ k ] = v;
+LvnMeta::set( std::string k, size_t v, bool constant, int value ) {
+    table[ k ] = { v, constant, value };
     chkCap( v );
 
-    // k is getting assign a new value.  Before adding the new addignment, remove k
+    // k is getting assign a new value.  Before adding the new assignment, remove k
     // from any other assignment
     clearDest( k );
     numToName[ v ].push_back( k );
@@ -72,16 +81,30 @@ LvnMeta::replaceWithI2i( std::string key ) {
     std::smatch mg;
 
     if( std::regex_match( key, mg, rx ) ) {
-        auto left{ std::stoi( mg[ 1 ] ) };
         auto right{ std::stoi( mg[ 2 ] ) };
-
-        auto lname{ lookUpName( left ) };
+        LvnMetaDatum klvn;
+        lookUp( key, klvn );
+        auto lname{ lookUpName( klvn.valNumber ) };
         auto rname{ lookUpName( right ) };
 
         return "i2i " + lname + " => " + rname;
     }
 
     return key;
+}
+
+std::string
+commafy( std::vector< std::string > ns ) {
+    std::string buffer;
+
+    if( ns.size() ) {
+        for( auto i = ns.begin(); i != ns.end() - 1; i++ ) {
+            buffer += *i + ", ";
+        }
+        buffer += *( ns.end() - 1 );
+    }
+
+    return buffer;
 }
 
 std::ostream &
@@ -91,15 +114,12 @@ LvnMeta::dumpLvn( std::ostream &os ) {
     
     os << "\tlvn table" << std::endl;
     for( auto i : table ) {
-        os << "\t\t" << i.first << " " << i.second << std::endl;
+        os << "\t\t" << i.first << " " << i.second.valNumber << std::endl;
     }
 
     os << "\tnumber to name table" << std::endl;
     for( auto i = 0; i < numToName.size(); i++ ) {
-        os << "\t\t" << i << " ";
-        for( auto j : numToName[ i ] ) {
-            os << j << ", ";
-        }
+        os << "\t\t" << i << " " << commafy( numToName[ i ] );
         os << std::endl;
     }
 
@@ -121,6 +141,57 @@ LvnMeta::chkCap( int c ) {
         numToName.resize( numToName.size() + capFactor );
     }
 
+}
+
+void
+LvnMeta::renameReg( std::string oldName, std::string newName ) {
+    auto oldNum{ stoi( oldName ) };
+    auto newNum{ stoi( newName.substr( 1 ) ) };
+
+    renameRegs[ oldNum ] = newNum;
+}
+
+std::string
+LvnMeta::updateRegisters( std::string i ) {
+    auto dirty{ true };
+    auto changed{ false };
+    auto copy{ i };
+
+    while( dirty ) {
+        dirty = false;
+
+        auto regCrx{ std::regex{ regC, std::regex::optimize } };
+        auto copyend{ copy.end() };
+
+        if( auto p = copy.find( '#' ) != std::string::npos ) {
+            copyend = copy.begin() + p;
+        } 
+
+        std::regex_iterator< std::string::iterator > rxIter{ copy.begin(), copyend, regCrx };
+        std::regex_iterator< std::string::iterator > rxEnd;
+
+        while( rxIter != rxEnd ) {
+            std::string regNum{ ( *rxIter )[ 1 ] };
+            if( std::isdigit( regNum[ 0 ] ) ) {
+                auto regIdx{ std::stoi( regNum ) };
+                if( renameRegs[ regIdx ] != regIdx ) {
+                    auto newReg{ "r" +  std::to_string( renameRegs[ regIdx ] ) };
+                    auto first{ copy.find( "r" + regNum ) };
+                    copy.replace( first, regNum.length() + 1, newReg );
+                    dirty = true;
+                    changed = true;
+                    break;
+                }
+            }
+            rxIter++;
+        }
+    }
+
+    if( changed ) {
+        return copy + "  # " + i;
+    }
+    
+    return copy;
 }
 
 
@@ -227,42 +298,133 @@ IR::isJumpInsr( std::string s ) {
     return false;
 }
 
+bool
+IR::isCommumative( std::string op ) {
+    return std::binary_search( commumativeOp.begin(), commumativeOp.end(), op );
+}
+
+bool
+IR::handleBinOp( LvnMeta &lvn,
+                 std::string rator, 
+                 std::string lrand, 
+                 std::string rrand, 
+                 std::string destn,
+                 std::string &replacement ) {
+
+    auto hasReplacement{ false };
+
+    LvnMetaDatum llvn;
+    if( !lvn.lookUp( lrand, llvn ) ) {
+        if( std::isdigit( lrand[ 0 ] ) ) {
+            auto v{ std::stoi( lrand ) };
+            llvn = lvn.add( lrand, true, v );
+        }
+        else {
+            llvn = lvn.add( lrand );
+        }
+    }
+
+    LvnMetaDatum rlvn;
+    if( !lvn.lookUp( rrand, rlvn ) ) {
+        if( std::isdigit( rrand[ 0 ] ) ) {
+            auto v{ std::stoi( rrand ) };
+            rlvn = lvn.add( rrand, true, v );
+        }
+        else {
+            rlvn = lvn.add( rrand );
+        }
+    }
+
+    LvnMetaDatum klvn;
+    // if llvn and rlvn are both constants, fold them
+    if( llvn.constant && rlvn.constant && ( rator == "add" || rator == "sub" || 
+            rator == "mult" || rator == "div" ) ) {
+        int result;
+        if( rator == "add" ) {
+            result = llvn.value + rlvn.value;
+        }
+        else if( rator == "sub" ) {
+            result = llvn.value - rlvn.value;
+        }
+        else if( rator == "mult" ) {
+            result = llvn.value * rlvn.value;
+        }
+        else if( rator == "div" ) {
+            result = llvn.value / rlvn.value;
+        }
+        klvn = lvn.add( std::to_string( result ), true, result );
+        replacement = "loadi " + std::to_string( result ) + " => " + "r" + destn;
+        hasReplacement = true;
+    }
+    else {
+        auto key{ std::to_string( llvn.valNumber ) + rator + 
+                std::to_string( rlvn.valNumber ) };
+        if( !lvn.lookUp( key, klvn ) ) {
+            klvn = lvn.add( key );
+        }
+        else {
+            replacement = lvn.replaceWithI2i( key );
+            hasReplacement = true;
+        }
+
+        if( isCommumative( rator ) ) {
+            auto key2{ std::to_string( rlvn.valNumber ) + rator + 
+                    std::to_string( llvn.valNumber ) };
+            LvnMetaDatum klvn2;
+            if( !lvn.lookUp( key2, klvn2 ) ) {
+                klvn2 = lvn.add( key2 );
+            }
+        }
+    }
+
+    lvn.set( "r"s + destn, klvn.valNumber, klvn.constant, klvn.value );
+
+    return hasReplacement;
+}
+
+bool
+IR::handleLoadiOp( LvnMeta &lvn, std::string imm, std::string reg, std::string &replacement ) {
+    LvnMetaDatum ilvn;
+    if( !lvn.lookUp( imm, ilvn ) ) {
+        ilvn = lvn.add( imm, true, std::stoi( imm ) );
+        lvn.set( "r"s + reg, ilvn.valNumber, ilvn.constant, ilvn.value );
+        return false;
+    }
+    else {
+        auto newRegName = lvn.lookUpName( ilvn.valNumber );
+        lvn.renameReg( reg, newRegName );
+        replacement = "# renamed register r" + reg + " to " + newRegName;
+        return true;
+    }
+
+
+}
+
 LvnMeta
 IR::localValueNumbering( BasicBlock &block ) {
     LvnMeta lvn;
 
     // find instructions of the form <op> <something>, <something> => <register>       
-    auto inst{ mkRX( { insrC, immOrRegC, com_, immOrRegC, arw_, regC } ) };
+    auto binOp{ mkRX( { insrC, immOrRegC, com_, immOrRegC, arw_, regC } ) };
+    auto loadiOp{ mkRX( { R"(loadi +)", immC, arw_, regC } ) };
     std::smatch mg;
 
+    auto line = 0;
+
     for( auto &i : block.codeBlock ) {
-        if( std::regex_match( i, mg, inst ) ) {
-            std::string rator{ mg[ 1 ] };
-            std::string lrand{ mg[ 2 ] };
-            std::string rrand{ mg[ 3 ] };
-            std::string destn{ mg[ 4 ] };
+        line++;
+        i.assign( lvn.updateRegisters( i ) );
+        std::string newLine;
+        auto hasRewrite{ false };
+        if( std::regex_match( i, mg, loadiOp ) ) {
+            hasRewrite = handleLoadiOp( lvn, mg[ 1 ], mg[ 2 ], newLine );
+        }
+        else if( std::regex_match( i, mg, binOp ) ) { 
+            hasRewrite = handleBinOp( lvn, mg[ 1 ], mg[ 2 ], mg[ 3 ], mg[ 4 ], newLine );
+        }
 
-            auto llvn{ lvn.lookUp( lrand ) };
-            if( llvn == -1 ) {
-                llvn = lvn.add( lrand );
-            }
-
-            auto rlvn{ lvn.lookUp( rrand ) };
-            if( rlvn == -1 ) {
-                rlvn = lvn.add( rrand );
-            }
-
-            auto key{ std::to_string( llvn ) + rator + std::to_string( rlvn ) };
-            auto klvn{ lvn.lookUp( key ) };
-            if( klvn == -1 ) {
-                klvn = lvn.add( key );
-            }
-            else {
-                std::cout << "can replace line " << i << " with " << lvn.replaceWithI2i( key ) << std::endl;
-                // i.assign( lvn.replaceIns( key ) );
-            }
-
-            lvn.set( "r"s + destn, klvn );
+        if( hasRewrite ) {
+            i.assign( newLine + "  # " + i );
         }
     }
 
@@ -279,7 +441,11 @@ IR::testLocalValueNumbering( std::string fnName,
             for( auto &b : x.basicBlocks ) {
                 if( b.name == blockName ) {
                     auto lvn{ localValueNumbering( b ) };
-                    // lvn.dumpLvn( os );
+                    lvn.dumpLvn( os );
+                    os << "adjusted code:" << std::endl;
+                    for( auto i : b.codeBlock ) {
+                        os << "\t" << i << std::endl;
+                    }
                     break;
                 }
             }
