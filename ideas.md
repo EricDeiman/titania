@@ -148,3 +148,5 @@ To build an executable program, run:
     [x] figure out what to do with comparisons
     [] implement (literal) strings
     [] add some way of measuring the benefit of optimizations
+    [x] the register renamer doesn't check for special registers rarp or rtos
+    [] the IR in general doesn't check for special registers

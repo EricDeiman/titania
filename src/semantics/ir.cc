@@ -143,12 +143,28 @@ LvnMeta::chkCap( int c ) {
 
 }
 
-void
+bool
 LvnMeta::renameReg( std::string oldName, std::string newName ) {
-    auto oldNum{ stoi( oldName ) };
-    auto newNum{ stoi( newName.substr( 1 ) ) };
+    auto _oldName{ oldName };
+    auto _newName{ newName };
 
-    renameRegs[ oldNum ] = newNum;
+    if( _oldName[ 0 ] == 'r' ) {
+        _oldName = _oldName.substr( 1 );
+    }
+
+    if( _newName[ 0 ] == 'r' ) {
+        _newName = _newName.substr( 1 );
+    }
+
+    if( std::isdigit( _oldName[ 0 ] ) && isdigit( _newName[ 0 ] ) ) {
+        auto oldNum{ stoi( _oldName ) };
+        auto newNum{ stoi( _newName ) };
+
+        renameRegs[ oldNum ] = newNum;
+        return true;
+    }
+
+    return false;
 }
 
 std::string
@@ -306,9 +322,9 @@ IR::isCommumative( std::string op ) {
 bool
 IR::handleBinOp( LvnMeta &lvn,
                  std::string rator, 
-                 std::string lrand, 
-                 std::string rrand, 
-                 std::string destn,
+                 std::string lrand,  // has prefix r
+                 std::string rrand,  // has preifx r
+                 std::string destn,  // does not have prefix r
                  std::string &replacement ) {
 
     auto hasReplacement{ false };
@@ -362,43 +378,64 @@ IR::handleBinOp( LvnMeta &lvn,
         if( rator == "add" ) {
             // a + 0 = a; 0 + a = a
             if( rlvn.constant && rlvn.value == 0 ) {
-                lvn.renameReg( destn, lrand.substr( 1 ) );
-                replacement = "# renamed register r" + destn + " to " + lrand;
-                return true;
+                if( lvn.renameReg( destn, lrand ) ) {
+                    replacement = "# renamed register r" + destn + " to " + lrand;
+                    return true;
+                }
             }
             else if( llvn.constant && llvn.value == 0 ) {
-                lvn.renameReg( destn, rrand.substr( 1 ) );
-                replacement = "# renamed register r" + destn + " to " + rrand;
-                return true;
+                if( lvn.renameReg( destn, rrand ) ) {
+                    replacement = "# renamed register r" + destn + " to " + rrand;
+                    return true;
+                }
             }
         }
         else if( rator == "sub" ) {
             // a - 0 = a
             if( rlvn.constant && rlvn.value == 0 ) {
-                lvn.renameReg( destn, lrand.substr( 1 ) );
-                replacement = "# renamed register r" + destn + " to " + lrand;
-                return true;
+                if( lvn.renameReg( destn, lrand ) ) {
+                    replacement = "# renamed register r" + destn + " to " + lrand;
+                    return true;
+                }
             }
         }
         else if( rator == "mult" ) {
             // a * 1 = a; 1 * a = a 
             if( rlvn.constant && rlvn.value == 1 ) {
-                lvn.renameReg( destn, lrand.substr( 1 ) );
-                replacement = "# renamed register r" + destn + " to " + lrand;
-                return true;
+                if( lvn.renameReg( destn, lrand ) ) {
+                    replacement = "# renamed register r" + destn + " to " + lrand;
+                    return true;
+                }
             }
             else if( llvn.constant && llvn.value == 1 ) {
-                lvn.renameReg( destn, rrand.substr( 1 ) );
-                replacement = "# renamed register r" + destn + " to " + rrand;
-                return true;
+                if( lvn.renameReg( destn, rrand ) ) {
+                    replacement = "# renamed register r" + destn + " to " + rrand;
+                    return true;
+                }
             }
         }
         else if( rator == "div" ) {
             // a / 1 = a
             if( rlvn.constant && rlvn.value == 1 ) {
-                lvn.renameReg( destn, lrand.substr( 1 ) );
-                replacement = "# renamed register r" + destn + " to " + lrand;
-                return true;
+                if( lvn.renameReg( destn, lrand ) ) {
+                    replacement = "# renamed register r" + destn + " to " + lrand;
+                    return true;
+                }
+            }
+        }
+        // if we get here, there was no transformation
+        auto key{ std::to_string( llvn.valNumber ) + rator + 
+                std::to_string( rlvn.valNumber ) };
+        if( !lvn.lookUp( key, klvn ) ) {
+            klvn = lvn.add( key );
+        }
+
+        if( isCommumative( rator ) ) {
+            auto key2{ std::to_string( rlvn.valNumber ) + rator + 
+                    std::to_string( llvn.valNumber ) };
+            LvnMetaDatum klvn2;
+            if( !lvn.lookUp( key2, klvn2 ) ) {
+                klvn2 = lvn.add( key2 );
             }
         }
     }
@@ -438,9 +475,15 @@ IR::handleLoadiOp( LvnMeta &lvn, std::string imm, std::string reg, std::string &
     }
     else {
         auto newRegName = lvn.lookUpName( ilvn.valNumber );
-        lvn.renameReg( reg, newRegName );
-        replacement = "# renamed register r" + reg + " to " + newRegName;
-        return true;
+        if( lvn.renameReg( reg, newRegName ) ) {
+            replacement = "# renamed register r" + reg + " to " + newRegName;
+            return true;
+        }
+        else {
+            ilvn = lvn.add( imm, true, std::stoi( imm ) );
+            lvn.set( "r"s + reg, ilvn.valNumber, ilvn.constant, ilvn.value );
+            return false;
+        }
     }
 
 

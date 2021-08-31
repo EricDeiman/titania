@@ -39,7 +39,7 @@ public:
     std::ostream &
     dumpLvn( std::ostream & );
 
-    void
+    bool
     renameReg( std::string, std::string );
 
     std::string
