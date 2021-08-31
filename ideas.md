@@ -132,7 +132,7 @@ To build an executable program, run:
         ## Local (in one basic block)
         [x] local value numbering
         [x] local constant folding
-        [] local expression identities (e.g., 0 + a = a, a - 0 = a, 1 x a = a)
+        [x] local expression identities (e.g., 0 + a = a, a - 0 = a, 1 x a = a)
         [] tree-height balancing
         ## Regional (between basic blocks)
         [] Suprelocal value numbering

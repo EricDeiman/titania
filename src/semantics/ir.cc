@@ -190,7 +190,7 @@ LvnMeta::updateRegisters( std::string i ) {
     if( changed ) {
         return copy + "  # " + i;
     }
-    
+
     return copy;
 }
 
@@ -355,6 +355,52 @@ IR::handleBinOp( LvnMeta &lvn,
         klvn = lvn.add( std::to_string( result ), true, result );
         replacement = "loadi " + std::to_string( result ) + " => " + "r" + destn;
         hasReplacement = true;
+    }
+    // if llvn or rlvn is a constant, check for identities
+    else if( ( llvn.constant || rlvn.constant ) && ( rator == "add" || rator == "sub" || 
+            rator == "mult" || rator == "div" ) ) {
+        if( rator == "add" ) {
+            // a + 0 = a; 0 + a = a
+            if( rlvn.constant && rlvn.value == 0 ) {
+                lvn.renameReg( destn, lrand.substr( 1 ) );
+                replacement = "# renamed register r" + destn + " to " + lrand;
+                return true;
+            }
+            else if( llvn.constant && llvn.value == 0 ) {
+                lvn.renameReg( destn, rrand.substr( 1 ) );
+                replacement = "# renamed register r" + destn + " to " + rrand;
+                return true;
+            }
+        }
+        else if( rator == "sub" ) {
+            // a - 0 = a
+            if( rlvn.constant && rlvn.value == 0 ) {
+                lvn.renameReg( destn, lrand.substr( 1 ) );
+                replacement = "# renamed register r" + destn + " to " + lrand;
+                return true;
+            }
+        }
+        else if( rator == "mult" ) {
+            // a * 1 = a; 1 * a = a 
+            if( rlvn.constant && rlvn.value == 1 ) {
+                lvn.renameReg( destn, lrand.substr( 1 ) );
+                replacement = "# renamed register r" + destn + " to " + lrand;
+                return true;
+            }
+            else if( llvn.constant && llvn.value == 1 ) {
+                lvn.renameReg( destn, rrand.substr( 1 ) );
+                replacement = "# renamed register r" + destn + " to " + rrand;
+                return true;
+            }
+        }
+        else if( rator == "div" ) {
+            // a / 1 = a
+            if( rlvn.constant && rlvn.value == 1 ) {
+                lvn.renameReg( destn, lrand.substr( 1 ) );
+                replacement = "# renamed register r" + destn + " to " + lrand;
+                return true;
+            }
+        }
     }
     else {
         auto key{ std::to_string( llvn.valNumber ) + rator + 
