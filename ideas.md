@@ -129,16 +129,6 @@ To build an executable program, run:
         constant or not)
 -    [x] break the IR into basic blocks
 -    [ ] manipulate basic blocks
-        ## Local (in one basic block)
--        [x] local value numbering
--        [x] local constant folding
--        [x] local expression identities (e.g., 0 + a = a, a - 0 = a, 1 x a = a)
--        [ ] tree-height balancing
-        ## Regional (between basic blocks)
--        [ ] Suprelocal value numbering
--        [ ] loop unrolling
-        ## Global (in an entire function)
-        ## Interprocedural (in the entire program)
 -    [x] abstract functions into their own container (i modified code buffer)
 -    [x] make code templates for IR generation (that didn't help as much as I thought it would)
 -    [ ] make code templates for x86-64 generation?
@@ -150,3 +140,13 @@ To build an executable program, run:
 -    [ ] add some way of measuring the benefit of optimizations
 -    [x] the register renamer doesn't check for special registers rarp or rtos
 -    [ ] the IR in general doesn't check for special registers
+     ## Local (in one basic block)
+-    [x] local value numbering
+-    [x] local constant folding
+-    [x] local expression identities (e.g., 0 + a = a, a - 0 = a, 1 x a = a)
+-    [ ] tree-height balancing
+     ## Regional (between basic blocks)
+-    [ ] Suprelocal value numbering
+-    [ ] loop unrolling
+     ## Global (in an entire function)
+     ## Interprocedural (in the entire program)
