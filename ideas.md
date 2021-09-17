@@ -1,8 +1,8 @@
 # code-name-titania
 - procedural language inspired by 
-    -- Pascal
-    -- Modula-2
-    -- Oberon
+    - Pascal
+    - Modula-2
+    - Oberon
 
 ## example
 
