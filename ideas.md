@@ -105,7 +105,7 @@ To build an executable program, run:
     g++ -std=c++17 -I ../include/antlr4-runtime/ \*.cpp \*.cc ../lib/libantlr4-runtime.a -o main
 
 # todo
-    [x] the type checker doesn't check the body of while/do
+-    [x] the type checker doesn't check the body of while/do
     [x] the type checker dosen't check the then body of if/then/else
     [x] the type checker doesn't check the else body (if there is one) of if/then/else
     [] the ir generator doesn't look at #ExprStmnt (does it need to? the default is to visit the children)
