@@ -1011,7 +1011,7 @@ main( int argc, char** argv ) {
         }
 
         IR opt{ std::move( ir ) };
-        opt.mkBasicBlocks();
+        // opt.mkBasicBlocks();
         // opt.dumpBasicBlocks( std::cout );
         // opt.testLocalValueNumbering( "id", "id", std::cout );
 

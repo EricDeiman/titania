@@ -18,9 +18,9 @@
 LIBDIR = ../lib
 INCDIR = ../include
 
-CXX = clang++
+CXX = g++
 
-OBJS = type.o elaboration.o codebuffer.o mustache.o ir.o cfg.o
+OBJS = type.o elaboration.o codebuffer.o mustache.o ir.o cfg.o ilocpat.o
 
 CXXFLAGS += -std=c++17 -g -I $(INCDIR) -I $(INCDIR)/antlr4-runtime -L $(LIBDIR)
 
@@ -38,9 +38,11 @@ cfg.o : cfg.cc cfg.hh
 
 mustache.o : mustache.cc mustache.hh
 
-testlvn : testlvn.cc codebuffer.cc ir.cc cfg.cc
-
 ir.o : ir.cc ir.hh
+
+ilocpat.o : ilocpat.cc ilocpat.hh
+
+testlvn : testlvn.cc codebuffer.o ir.o cfg.o ilocpat.o
 
 tc : $(OBJS) $(LIBDIR)/libtitaniaParser.a
 	$(CXX) $(CXXFLAGS) $(OBJS) -l titaniaParser -l antlr4-runtime -o $@

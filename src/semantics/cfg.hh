@@ -28,6 +28,12 @@ using namespace std;
 #include "basicblock.hh"
 #include "codebuffer.hh"
 
+class Edge {
+public:
+    string source;
+    string destination;
+};
+
 // One control flow graph per function
 class Cfg {
 public:
@@ -57,10 +63,14 @@ private:
         blockNames[ name ] = offset;
     }
 
+    vector< string >
+    getJumpTargets( string );
+
     unordered_map< string, size_t > blockNames;
 
-    string name;
+    vector< Edge > edges;
 
+    string name;
 };
 
 #endif

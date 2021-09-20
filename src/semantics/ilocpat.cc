@@ -15,29 +15,28 @@
   Titania programming language. If not, see <https://www.gnu.org/licenses/>
 */
 
-#ifndef ILOCPAT_HH
-#define ILOCPAT_HH
+#include "ilocpat.hh"
 
-#include <string>
-#include <regex>
+string immC{ R"((-?\d+|@\w+))" };  
+string regC{ R"(r(\d+|tos|arp))" };  
+string ccC{ R"(cc(\d+))" };  
+string insrC{ R"((\w+) +)" };  
+string immOrRegC{ R"((-?\d+|@\w+|r\d+|rarp|rtos))" };  
 
-using namespace std;
-
-// the NOLINT comments are to supress a particular warning from clang tidy
-
-extern string immC;
-extern string regC;
-extern string ccC;
-extern string insrC;
-extern string immOrRegC;
-
-extern string arw_;
-extern string srw_;
-extern string cel_;
-extern string com_;
+string arw_{ " *=> *" };  
+string srw_{ " *-> *" };  
+string cel_{ R"((.*#.*)?)" };  
+string com_{ " *, *" };  
 
 regex
-mkRX( vector< string > );
+mkRX( vector< string > pattern ) {  // NOLINT(misc-definitions-in-headers)
+    string buff;
 
+    for( auto s : pattern ) {
+        buff += s;
+    }
 
-#endif
+    buff += cel_;
+
+    return regex{ buff, regex::optimize };
+}

@@ -41,7 +41,7 @@ main( int argc, char **argv ) {
 
     IR ir{ std::move( vcb ) };
     // ir.mkBasicBlocks();
-    ir.testLocalValueNumbering( "!", "!", std::cout );
+    //ir.testLocalValueNumbering( "!", "!", std::cout );
     // ir.dumpBasicBlocks( std::cout );
 
     // ir.testTreeHeightBalance( "!", "!", std::cout );

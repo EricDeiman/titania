@@ -17,11 +17,13 @@
 
 
 #include <algorithm>
+#include <regex>
 #include <string>
 
 using namespace std;
 
 #include "cfg.hh"
+#include "ilocpat.hh"
 
 Cfg::Cfg( CodeBuffer &fnCode ) {
     name = fnCode.getName();
@@ -78,11 +80,17 @@ Cfg::mkBasicBlock( CodeBuffer &code ) {
             bb.codeBlock.push_back( buffer->at( i ) );
             bb.endIdx = i;
             // basicBlocks.push_back( move( bb ) );
+            auto oldBbName = bb.name;
             addBlock( move( bb ) );
             bb.codeBlock.reserve( 1 );
             blockStarted = false;
             bb.startIdx = 0;
             bb.endIdx = 0;
+            auto targets{ getJumpTargets( buffer->at( i ) ) };
+            for( auto t : targets ) {
+                Edge out{ .source = oldBbName, .destination = t };
+                edges.push_back( move( out ) );
+            }
         }
         else if( blockStarted ) {
             bb.codeBlock.push_back( buffer->at( i ) );
@@ -90,21 +98,49 @@ Cfg::mkBasicBlock( CodeBuffer &code ) {
     }
 }
 
+vector< string >
+Cfg::getJumpTargets( string instruction ) {
+    vector< string > result;
+
+    auto opoode{ instruction.substr( 0, instruction.find( ' ' ) ) };
+
+    if( opoode != "hlt" ) {
+        if( opoode[ 0 ] == 'c' ) {  // conditional branch
+            auto pat{ mkRX( { insrC, ccC, arw_, immC, com_, immC } ) };
+            smatch mg;
+            if( regex_match( instruction, mg, pat ) ) {
+                result.push_back( mg[ 3 ].str() );
+                result.push_back( mg[ 4 ].str() );
+            }
+        }
+        else {   // jump instruction
+            auto pat{ mkRX( { insrC, immC } ) };
+            smatch mg;
+
+            if( regex_match( instruction, mg, pat ) ) {
+                result.push_back( mg[ 2 ].str() );
+            }
+        }
+    }
+
+    return result;
+}
+
 bool
 Cfg::isJumpInsr( string s ) {
 
     // SORTED!
     vector< string > jumpInsrs { { 
-        "call",
+        // "call",  // a call is always followed by a label
         "cbreq",
         "cbrneq",
-        "hlt",
+        "hlt",  // halt always means end of a block
         "jump",
         "jumpi",
-        "ret",
-        "showb",
-        "showi",
-        "shows" 
+        "ret",  // return always means end of a block
+        // "showb",
+        // "showi",
+        // "shows" 
     } };
 
     if( s[ 0 ] == '#' ) {
