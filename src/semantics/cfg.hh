@@ -15,52 +15,52 @@
   Titania programming language. If not, see <https://www.gnu.org/licenses/>
 */
 
-#ifndef iloci_hh
-#define iloci_hh
+#ifndef CFG_HH
+#define CFG_HH
 
 #include <cstddef>
-#include <cstdint>
-#include <iostream>
 #include <string>
-#include <tuple>
-#include <unordered_map>
 #include <vector>
+#include <unordered_map>
 
-class State {
+using namespace std;
+
+#include "basicblock.hh"
+#include "codebuffer.hh"
+
+// One control flow graph per function
+class Cfg {
 public:
-    State( size_t regCount = 256, size_t memSize = 1024 ) : registers( regCount ), 
-                                                            ccregs( regCount ),
-                                                            memory( memSize ) {}
+    Cfg( CodeBuffer & );
 
-    std::vector< std::int64_t >
-    registers;
+    vector< BasicBlock > basicBlocks;
 
-    std::vector< std::vector< std::int64_t > >
-    registersStack;
+    int
+    getOffset( string name );
 
-    std::vector< std::int64_t >
-    memory;
+    string
+    getName();
 
-    std::vector< int >
-    ccregs;
-
-    std::vector< std::vector< int > >
-    ccregsStack;
-
-    std::unordered_map< std::string, size_t >
-    labelOffsets;
-
-    std::int64_t
-    tos = -1;
-
-    std::int64_t
-    arp = 0;
+private:
+    void
+    mkBasicBlock( CodeBuffer & );
 
     bool
-    running = true;
+    isJumpInsr( string );
 
-    size_t
-    insrPtr = 0;
+    void
+    addBlock( BasicBlock &&block ) {
+        auto name{ block.name };
+        auto offset{ basicBlocks.size() };
+
+        basicBlocks.push_back( move( block ) );
+        blockNames[ name ] = offset;
+    }
+
+    unordered_map< string, size_t > blockNames;
+
+    string name;
+
 };
 
 #endif

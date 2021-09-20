@@ -1,13 +1,37 @@
+/*
+  The Titania programming language
+  Copyright 2021 Eric J. Deiman
+
+  This file is part of the Titania programming language.
+  The Titania programming language is free software: you can redistribute it
+  and/ormodify it under the terms of the GNU General Public License as published by the
+  Free Software Foundation, either version 3 of the License, or (at your option) any
+  later version.
+  
+  The Titania programming language is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+  You should have received a copy of the GNU General Public License along with the
+  Titania programming language. If not, see <https://www.gnu.org/licenses/>
+*/
+
 #ifndef IR_HH
 #define IR_HH
 
+#include <algorithm>
 #include <cstddef>
+#include <functional>
 #include <iostream>
+#include <ostream>
+#include <queue>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+using namespace std;
+
 #include "basicblock.hh"
+#include "cfg.hh"
 #include "codebuffer.hh"
 #include "mredutil.hh"
 
@@ -20,90 +44,121 @@ public:
 
 class LvnMeta {
 public:
-    using lvnDict = std::unordered_map< std::string, LvnMetaDatum >;
+    using lvnDict = unordered_map< string, LvnMetaDatum >;
 
     LvnMeta();
 
     bool
-    lookUp( std::string, LvnMetaDatum & );
+    lookUp( string, LvnMetaDatum & );
 
     LvnMetaDatum
-    add( std::string, bool = false, int = 0 );
+    add( string, bool = false, int = 0 );
 
     size_t
-    set( std::string, size_t, bool = false, int = 0 );
+    set( string, size_t, bool = false, int = 0 );
 
-    std::string
-    replaceWithI2i( std::string );
+    string
+    replaceWithI2i( string );
 
-    std::ostream &
-    dumpLvn( std::ostream & );
+    ostream &
+    dumpLvn( ostream & );
 
     bool
-    renameReg( std::string, std::string );
+    renameReg( string, string );
 
-    std::string
-    updateRegisters( std::string );
+    string
+    updateRegisters( string );
 
-    std::string
+    string
     lookUpName( size_t );
 
 private:
     lvnDict table;
     size_t number = 0;
     static constexpr int capFactor = 10;
-    std::vector< std::vector< std::string > > numToName{ capFactor };
-    std::vector< size_t >renameRegs;
+    vector< vector< string > > numToName{ capFactor };
+    vector< size_t >renameRegs;
 
     void
     chkCap( int = -1 );
 
     void
-    clearDest( std::string );
+    clearDest( string );
 };
 
 class IR {
 public:
-    IR( std::vector< CodeBuffer >&& s ) : fnBuffers( s ) {}
-
-    void 
-    mkBasicBlocks();
+    IR( vector< CodeBuffer >&& s ) : fnBuffers( s ) {
+        for( auto fn : fnBuffers ) {
+            Cfg cfg{ fn };
+            cfgs.push_back( move( cfg ) );
+        }
+    }
 
     LvnMeta
     localValueNumbering( BasicBlock & );
 
-    std::ostream &
-    testLocalValueNumbering( std::string, std::string, std::ostream & );
+    ostream &
+    testLocalValueNumbering( string, string, ostream & );
 
-    std::ostream&
-    dumpBasicBlocks( std::ostream &os );
+    ostream&
+    dumpBasicBlocks( ostream &os );
 
     bool
-    isCommumative( std::string );
+    isCommumative( string );
 
-private:
-    std::vector< CodeBuffer >fnBuffers;
+    int
+    operatorPrecedence( string );
 
     void
-    mkBasicBlock( CodeBuffer & );
+    treeHeightBalance( BasicBlock & );
 
-    bool
-    isJumpInsr( std::string );
+    // ostream &
+    // testTreeHeightBalance( string, string, ostream & );
+
+private:
+    vector< CodeBuffer >fnBuffers;
+    vector< Cfg > cfgs;
 
     static nullstream _nullstream;
 
     bool
-    handleBinOp( LvnMeta &, std::string, std::string, std::string, std::string, std::string & );
+    handleBinOp( LvnMeta &, string, string, string, string, string & );
 
     bool
-    handleLoadiOp( LvnMeta &, std::string, std::string, std::string & );
+    handleLoadiOp( LvnMeta &, string, string, string & );
 
-    std::vector< std::string >commumativeOp {
+    vector< string >commumativeOp {
         "add", 
         "addi",
         "mult", 
         "multi",
     };
+
+    unordered_map< string, vector< size_t > >
+    buildUses( BasicBlock & );
+
+    unordered_map< string, int >rank;
+
+    struct thbDatum {
+        string temporary;
+        string instr;
+        int opPriority;
+    };
+
+    // void
+    // balance( thbDatum & );
+
+    // using thbQueue = priority_queue< thbDatum,
+    //         vector< thbDatum >,
+    //         greater< thbDatum > >;
+
+    // int
+    // flatten( string, thbQueue & );
+
+    // void
+    // rebuild( thbQueue &, string );
+
 };
 
 #endif

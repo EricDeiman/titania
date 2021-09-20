@@ -1,12 +1,32 @@
+/*
+  The Titania programming language
+  Copyright 2021 Eric J. Deiman
+
+  This file is part of the Titania programming language.
+  The Titania programming language is free software: you can redistribute it
+  and/ormodify it under the terms of the GNU General Public License as published by the
+  Free Software Foundation, either version 3 of the License, or (at your option) any
+  later version.
+  
+  The Titania programming language is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+  You should have received a copy of the GNU General Public License along with the
+  Titania programming language. If not, see <https://www.gnu.org/licenses/>
+*/
+
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <ostream>
+#include <queue>
 #include <regex>
 #include <string>
 #include <unordered_map>
 
 #include "ilocpat.hh"
 #include "ir.hh"
+
 
 using namespace std::literals::string_literals;
 
@@ -213,13 +233,6 @@ LvnMeta::updateRegisters( std::string i ) {
 
 // IR -----------------------------------------------------------------------------------
 
-void
-IR::mkBasicBlocks() {
-    for( auto &b : fnBuffers ) {
-        mkBasicBlock( b );
-    }
-}
-
 std::ostream&
 IR::dumpBasicBlocks( std::ostream &os ) {
     for( auto &b : fnBuffers ) {
@@ -238,85 +251,32 @@ IR::dumpBasicBlocks( std::ostream &os ) {
         return os;
 }
 
-void
-IR::mkBasicBlock( CodeBuffer &code ) {
-    auto buffer{ code.getBuffer() };
-    BasicBlock bb;
-    bool blockStarted = false;
-
-    for( auto i = 0; i < buffer->size(); i++ ) {
-        if( buffer->at( i ).find_first_of( ':' ) != std::string::npos ) {
-            if( blockStarted ) {
-                // finish the existing block
-                bb.endIdx = i - 1;
-                auto label{ buffer->at( i ) };
-                auto id{ label.substr( 0, label.find_first_of( ':' ) ) };
-                bb.codeBlock.push_back( "jumpi @" + id );
-                code.getBlocks().push_back( std::move( bb ) );
-
-                // and start a new one
-                bb.codeBlock.reserve( 1 );
-                bb.codeBlock.push_back( label );
-                bb.name = id;
-                bb.startIdx = i;
-                bb.endIdx = 0;
-            }
-            else {
-                bb.codeBlock.push_back( buffer->at( i ) );
-                auto label{ buffer->at( i ) };
-                bb.name = label.substr( 0, label.find_first_of( ':' ) );
-                bb.startIdx = i;
-                blockStarted = true;
-            }
-        }
-        else if( blockStarted && isJumpInsr( buffer->at( i ) ) ) {
-            bb.codeBlock.push_back( buffer->at( i ) );
-            bb.endIdx = i;
-            code.getBlocks().push_back( std::move( bb ) );
-            bb.codeBlock.reserve( 1 );
-            blockStarted = false;
-            bb.startIdx = 0;
-            bb.endIdx = 0;
-        }
-        else if( blockStarted ) {
-            bb.codeBlock.push_back( buffer->at( i ) );
-        }
-    }
+bool
+IR::isCommumative( std::string op ) {
+    return std::binary_search( commumativeOp.begin(), commumativeOp.end(), op );
 }
 
 bool
-IR::isJumpInsr( std::string s ) {
-
-    // SORTED!
-    std::vector< std::string > jumpInsrs { { 
-        "call",
-        "cbreq",
-        "cbrneq",
-        "hlt",
-        "jump",
-        "jumpi",
-        "ret",
-        "showb",
-        "showi",
-        "shows" 
-    } };
-
-    if( s[ 0 ] == '#' ) {
-        return false;
-    }
-
-    auto insr{ s.substr( 0, s.find_first_of( ' ' ) ) };
-
-    if( std::binary_search( jumpInsrs.begin(), jumpInsrs.end(), insr ) ) {
-        return true;
+startsWith( std::string target, std::string prefix ) {
+    if( size_t p = target.find( prefix ) != std::string::npos ) {
+        return p == 1;
     }
 
     return false;
 }
 
-bool
-IR::isCommumative( std::string op ) {
-    return std::binary_search( commumativeOp.begin(), commumativeOp.end(), op );
+int
+IR::operatorPrecedence( std::string op ) {
+    if( startsWith( op, "add" ) || startsWith( op, "mult" ) ) {
+        if( startsWith( op, "mult" ) ) {
+            return 2;
+        }
+        else {
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 bool
@@ -544,3 +504,123 @@ IR::testLocalValueNumbering( std::string fnName,
 
     return os;
 }
+
+bool
+operator>( const std::pair< std::string, int > &lhs, const std::pair< std::string, int > &rhs ){
+    return lhs.second > rhs.second;
+}
+
+// int
+// IR::flatten( std::string reg,  
+//         std::priority_queue< thbDatum,
+//             std::vector< thbDatum >,
+//             std::greater< thbDatum > > &q ) {
+
+
+//     return 0;
+// }
+
+// void
+// IR::rebuild( thbQueue &q, std::string op ) {
+
+// }
+
+// void
+// IR::balance( thbDatum &root ) {
+
+//     if( rank[ root.temporary ] >= 0 ) {
+//         return;
+//     }
+
+//     auto binOp{ mkRX( { insrC, immOrRegC, com_, immOrRegC, arw_, regC } ) };
+//     std::smatch mg;
+//     thbQueue q;
+
+//     std::regex_match( root.instr, mg, binOp );
+
+//     rank[ root.temporary ] = flatten( mg[ 2 ], q ) + flatten( mg[ 3 ], q );
+
+//     rebuild( q, mg[ 1 ] );
+// }
+
+// void
+// IR::treeHeightBalance( BasicBlock &block ) {
+
+//     auto uses{ buildUses( block ) };
+//     auto binOp{ mkRX( { insrC, immOrRegC, com_, immOrRegC, arw_, regC } ) };
+//     std::smatch mg;
+//     auto line{ 0 };
+//     std::vector< std::string >isRoot;
+//     thbQueue roots;
+
+
+//     for( auto &inst : block.codeBlock ) {
+//         if( std::regex_match( inst, mg, binOp ) ) {
+//             auto dest{ "r" + mg[ 4 ].str() };
+//             rank[ dest ] = -1;
+//             if( isCommumative( mg[ 1 ] ) ) {
+//                 if( 1 < uses[ dest ].size() || 1 == uses[ dest ].size() && uses[ dest ][ 0 ] != line ) {
+//                     // dest is a root
+//                     isRoot.push_back( dest );
+//                     roots.push( { dest, inst, operatorPrecedence( mg[ 1 ].str() ) } );
+//                 }
+//             }
+//         }        
+//         line++;
+//     }
+
+//     std::cout << "in tree height balance" << std::endl;
+//     while( !roots.empty() ) {
+//         auto &i = roots.top();
+
+//         roots.pop();
+
+//     }
+// }
+
+std::unordered_map< std::string, std::vector< size_t > >
+IR::buildUses( BasicBlock &block ) {
+    // Go through the code block to find all the uses of registers as operands in binary 
+    // operators
+
+    std::unordered_map< std::string, std::vector< size_t > > rtn;
+
+    auto binOp{ mkRX( { insrC, immOrRegC, com_, immOrRegC, arw_, regC } ) };
+    std::smatch mg;
+    auto line{ 0 };
+
+    for( auto &inst : block.codeBlock ) {
+        if( std::regex_match( inst, mg, binOp ) ) {
+            auto rand1{ mg[ 2 ].str() };
+            auto rand2{ mg[ 3 ].str() };
+            if( rand1[ 0 ] == 'r' && std::isdigit( rand1[ 1 ] ) ) {
+                rtn[ rand1 ].push_back( line );
+            }
+            if( rand2[ 0 ] == 'r' && std::isdigit( rand2[ 1 ] ) ) {
+                rtn[ rand2 ].push_back( line );
+            }
+        }
+
+        line++;
+    }
+    
+    return rtn;
+}
+
+// std::ostream &
+// IR::testTreeHeightBalance( std::string fnName, std::string blockName, std::ostream &os ) {
+//     for( auto &x : fnBuffers ) {
+//        if( x.getName() == fnName ) {
+//             for( auto &b : x.basicBlocks ) {
+//                 if( b.name == blockName ) {
+//                     treeHeightBalance( b );
+//                     break;
+//                 }
+//             }
+//             break;
+//         }
+//     }
+
+//     return os;
+
+// }
