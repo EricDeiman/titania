@@ -23,8 +23,6 @@
 
 using namespace std;
 
-// the NOLINT comments are to supress a particular warning from clang tidy
-
 extern string immC;
 extern string regC;
 extern string ccC;

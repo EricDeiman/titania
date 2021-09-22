@@ -29,7 +29,7 @@ string cel_{ R"((.*#.*)?)" };
 string com_{ " *, *" };  
 
 regex
-mkRX( vector< string > pattern ) {  // NOLINT(misc-definitions-in-headers)
+mkRX( vector< string > pattern ) { 
     string buff;
 
     for( auto s : pattern ) {

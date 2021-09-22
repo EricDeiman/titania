@@ -1,0 +1,16 @@
+module irwhiletest
+
+    from
+        std use showi
+
+    var
+        i : integer <- 0 
+
+begin
+
+    while i < 10 do
+        showi( i ) ;
+        i <- i + 1 ;
+    end    
+
+end

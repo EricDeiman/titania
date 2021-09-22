@@ -102,11 +102,11 @@ vector< string >
 Cfg::getJumpTargets( string instruction ) {
     vector< string > result;
 
-    auto opoode{ instruction.substr( 0, instruction.find( ' ' ) ) };
+    auto opcode{ instruction.substr( 0, instruction.find( ' ' ) ) };
 
-    if( opoode != "hlt" ) {
-        if( opoode[ 0 ] == 'c' ) {  // conditional branch
-            auto pat{ mkRX( { insrC, ccC, arw_, immC, com_, immC } ) };
+    if( opcode != "hlt" ) {
+        if( opcode[ 0 ] == 'c' ) {  // conditional branch
+            auto pat{ mkRX( { insrC, ccC, srw_, immC, com_, immC } ) };
             smatch mg;
             if( regex_match( instruction, mg, pat ) ) {
                 result.push_back( mg[ 3 ].str() );
