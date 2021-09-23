@@ -58,7 +58,6 @@ Cfg::mkBasicBlock( CodeBuffer &code ) {
                 auto label{ buffer->at( i ) };
                 auto id{ label.substr( 0, label.find_first_of( ':' ) ) };
                 bb.codeBlock.push_back( "jumpi @" + id );
-                // basicBlocks.push_back( move( bb ) );
                 addBlock( move( bb ) );
 
                 // and start a new one
@@ -78,8 +77,10 @@ Cfg::mkBasicBlock( CodeBuffer &code ) {
         }
         else if( blockStarted && isJumpInsr( buffer->at( i ) ) ) {
             bb.codeBlock.push_back( buffer->at( i ) );
+
+            checkDataFlow( buffer->at( i ), bb );
+
             bb.endIdx = i;
-            // basicBlocks.push_back( move( bb ) );
             auto oldBbName = bb.name;
             addBlock( move( bb ) );
             bb.codeBlock.reserve( 1 );
@@ -94,6 +95,8 @@ Cfg::mkBasicBlock( CodeBuffer &code ) {
         }
         else if( blockStarted ) {
             bb.codeBlock.push_back( buffer->at( i ) );
+
+            checkDataFlow( buffer->at( i ), bb );
         }
     }
 }
@@ -124,6 +127,100 @@ Cfg::getJumpTargets( string instruction ) {
     }
 
     return result;
+}
+
+void
+Cfg::checkDataFlow( string insr, BasicBlock &bb ) {
+    // Process names used by the instruction
+    auto touchedNames{ getNamesUsedOrDefined( insr ) };
+
+    if( touchedNames.used.size() > 0 ) {
+        bb.namesUsed.insert( touchedNames.used.begin(), touchedNames.used.end() );
+
+        for( auto n : touchedNames.used ) {
+            if( 0 == bb.namesDefined.count( n ) ) {
+                bb.upExposedNames.insert( n );
+            }
+        }
+    }
+
+    if( touchedNames.defined.size() > 0 ) {
+        bb.namesDefined.insert( touchedNames.defined.begin(), 
+            touchedNames.defined.end() );
+    }
+}
+
+Cfg::Names
+Cfg::getNamesUsedOrDefined( string insr ) {
+    // Names in this context are register names, not labels
+    Names rtn;
+
+    // What is the shape of the instruction
+    
+    // <insr> <name>, <name> => <name>
+    auto binOp{ mkRX( { insrC, immOrRegOrCcC, com_, immOrRegOrCcC, arw_, immOrRegOrCcC } ) };
+    
+    // <insr> <name> => <name>
+    auto uniOp{ mkRX( { insrC, immOrRegOrCcC, arw_, immOrRegOrCcC } ) };
+    
+    // <insr> <name>
+    auto simOp{ mkRX( { insrC, immOrRegOrCcC }) };
+    
+    // <insr> <name> -> <name>, <name>
+    auto cbrOp{ mkRX( { insrC, immOrRegOrCcC, srw_, immOrRegOrCcC, com_, immOrRegOrCcC }) };
+
+    smatch mg;
+
+    // Names start with "r" for register or "c" for condition code
+    if( regex_match( insr, mg, binOp ) ) {
+        if( mg[ 2 ].str()[ 0 ] == 'r' ||  mg[ 2 ].str()[ 0 ] == 'c' ) {
+            rtn.used.insert( mg[ 2 ].str() );
+        }
+        if( mg[ 3 ].str()[ 0 ] == 'r' ||  mg[ 3 ].str()[ 0 ] == 'c' ) {
+            rtn.used.insert( mg[ 3 ].str() );
+        }
+        if( mg[ 4 ].str()[ 0 ] == 'r' ||  mg[ 4 ].str()[ 0 ] == 'c' ) {
+            rtn.defined.insert( mg[ 4 ].str() );
+        }
+    }
+    else if( regex_match( insr, mg, uniOp ) ) {
+        if( mg[ 2 ].str()[ 0 ] == 'r' ||  mg[ 2 ].str()[ 0 ] == 'c' ) {
+            rtn.used.insert( mg[ 2 ].str() );
+        }
+        // store does not define its RHS
+        if( mg[ 1 ].str().find( "store" ) == string::npos ) {
+            if( mg[ 3 ].str()[ 0 ] == 'r' ||  mg[ 3 ].str()[ 0 ] == 'c' ) {
+                rtn.defined.insert( mg[ 3 ].str() );
+            }
+
+        }
+    }
+    else if( regex_match( insr, mg, simOp ) ) {
+        if( mg[ 2 ].str()[ 0 ] == 'r' ||  mg[ 2 ].str()[ 0 ] == 'c' ) {
+            // push and jump instructions both use a name
+            if( mg[ 1 ].str().find( "push" ) == 0 ||
+                mg[ 1 ].str().find( "jump" ) == 0 ) {
+                rtn.used.insert( mg[ 2 ].str() );
+            }
+            // pop defines a name
+            else if( mg[ 1 ].str().find( "pop" ) == 0 ) {
+                rtn.defined.insert( mg[ 2 ].str() );
+            }
+        }
+    }
+    else if( regex_match( insr, mg, cbrOp ) ) {
+       if( mg[ 2 ].str()[ 0 ] == 'r' ||  mg[ 2 ].str()[ 0 ] == 'c' ) {
+            rtn.used.insert( mg[ 2 ].str() );
+        }
+        if( mg[ 3 ].str()[ 0 ] == 'r' ||  mg[ 3 ].str()[ 0 ] == 'c' ) {
+            rtn.used.insert( mg[ 3 ].str() );
+        }
+        if( mg[ 4 ].str()[ 0 ] == 'r' ||  mg[ 4 ].str()[ 0 ] == 'c' ) {
+            rtn.used.insert( mg[ 4 ].str() );
+        }
+    }
+
+    return rtn;
 }
 
 bool

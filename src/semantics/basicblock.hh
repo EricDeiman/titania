@@ -21,6 +21,9 @@
 #include <cstddef>
 #include <string>
 #include <vector>
+#include <unordered_set>
+
+using namespace std;
 
 // the indecies are inclusive
 // rather than try to erase lines out of the vector to remove iloc code,
@@ -28,13 +31,16 @@
 // the iloc
 class BasicBlock {
 public:
-    std::string name;
+    string name;
 
     size_t startIdx;
     size_t endIdx;
 
-    std::vector< std::string >
-    codeBlock;
+    vector< string > codeBlock;
+
+    unordered_set< string > namesUsed;
+    unordered_set< string > namesDefined;
+    unordered_set< string > upExposedNames;
 };
 
 

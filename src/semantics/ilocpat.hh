@@ -28,6 +28,7 @@ extern string regC;
 extern string ccC;
 extern string insrC;
 extern string immOrRegC;
+extern string immOrRegOrCcC;
 
 extern string arw_;
 extern string srw_;

@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace std;
 
@@ -65,6 +66,18 @@ private:
 
     vector< string >
     getJumpTargets( string );
+
+    class Names {
+    public:
+        unordered_set< string > used;
+        unordered_set< string > defined;
+    };
+
+    Names
+    getNamesUsedOrDefined( string );
+
+    void
+    checkDataFlow( string, BasicBlock & );
 
     unordered_map< string, size_t > blockNames;
 

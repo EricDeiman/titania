@@ -22,6 +22,7 @@ string regC{ R"(r(\d+|tos|arp))" };
 string ccC{ R"(cc(\d+))" };  
 string insrC{ R"((\w+) +)" };  
 string immOrRegC{ R"((-?\d+|@\w+|r\d+|rarp|rtos))" };  
+string immOrRegOrCcC{ R"((-?\d+|@\w+|r\d+|rarp|rtos|cc\d+))" };
 
 string arw_{ " *=> *" };  
 string srw_{ " *-> *" };  
