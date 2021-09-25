@@ -10,6 +10,8 @@ environment
    1. The command `tc` will compile a titania file into iloc
    1. The command `ti` will interpret an iloc file
    1. The command `topt` will perform optimizations on an iloc file
+      1. Creates file `<source-name>.cfg.dot` to draw the control flow graph
+      1. Creates file `<souce-name>.ebbs.dot` to draw the extended basic blocks
 
 # Directories
 The `src` directory holds all the source code for the language.  
