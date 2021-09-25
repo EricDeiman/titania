@@ -142,6 +142,19 @@ another turing complete language.
 - [ ] add some way of measuring the benefit of optimizations
 - [x] the register renamer doesn't check for special registers rarp or rtos
 - [ ] the IR in general doesn't check for special registers
+## Control flow graph
+- [x] basic blocks
+- [x] control flow edges
+- [x] extended basic blocks
+- [ ] post order numbering
+- [ ] reverse post order numbering
+- [ ] reverse cfg
+## Data flow analysis
+- [x] upward exposed names
+- [ ] killed names
+- [ ] live out
+- [ ] dominance
+- [ ] reaching definitions
 ## Local (in one basic block)
 - [x] local value numbering
 - [x] local constant folding
