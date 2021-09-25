@@ -8,3 +8,5 @@ testlvn
 *.cache
 ../.cache/
 *.iloc*
+*.dot
+*.jpg

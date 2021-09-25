@@ -1,0 +1,42 @@
+(*
+
+Test file to check building of extended basic blocks.  Builds a CFG that looks like
+the one on page 438 of Engineering a Compiler, 2/e by Cpper and Torczon
+
+*)
+
+module irtestebb
+
+    from
+        std use showb, showi
+
+    var
+        i : integer <- 0 ;
+        y : integer ;
+
+begin
+    (* B0 *)
+
+    while ( i < 10 ) do
+        y <- 0 ;
+
+        if i % 2 ?= 0 then 
+            y <- 1 ;
+        else
+            (* B2 *)
+            if i % 3 ?= 0 then 
+                (* B3 *)
+                y <- 2 ;
+            else 
+                (* B4 *)
+                y <- 3 ;
+            end
+            (* B5 *)
+            y <- 4 ;
+        end
+
+        (* B6 *)
+        i <- i + 1 ;
+    end    
+
+end

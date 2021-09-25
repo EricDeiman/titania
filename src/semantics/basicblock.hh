@@ -41,6 +41,8 @@ public:
     unordered_set< string > namesUsed;
     unordered_set< string > namesDefined;
     unordered_set< string > upExposedNames;
+
+    size_t fanIn = 0;
 };
 
 

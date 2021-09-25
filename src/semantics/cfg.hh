@@ -38,7 +38,7 @@ public:
 // One control flow graph per function
 class Cfg {
 public:
-    Cfg( CodeBuffer & );
+    Cfg( CodeBuffer &, string );
 
     vector< BasicBlock > basicBlocks;
 
@@ -79,11 +79,30 @@ private:
     void
     checkDataFlow( string, BasicBlock & );
 
+    void
+    findExtendedBasicBlocks();
+
+    // each inner vector holds one extended basic block (EBB).  The outter vector holds 
+    // all EBBs.  The first element of the inner EBB is a basic block that has a fan-in of 
+    // more than one.  Each EBB will contain one or more basic blocks.
+    vector< vector< string > >
+    extendedBasicBlocks;
+
+    vector< string > &
+    buildEbb( vector< string > &, string );
+
+    void
+    drawBbs();
+
+    void
+    drawEbbs();
+
     unordered_map< string, size_t > blockNames;
 
     vector< Edge > edges;
 
     string name;
+    string fileName;
 };
 
 #endif

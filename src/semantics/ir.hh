@@ -88,9 +88,9 @@ private:
 
 class IR {
 public:
-    IR( vector< CodeBuffer >&& s ) : fnBuffers( s ) {
+    IR( vector< CodeBuffer >&& s, string fName ) : fnBuffers( s ), fileName( fName) {
         for( auto fn : fnBuffers ) {
-            Cfg cfg{ fn };
+            Cfg cfg{ fn, fileName };
             cfgs.push_back( move( cfg ) );
         }
     }
@@ -145,6 +145,8 @@ private:
         string instr;
         int opPriority;
     };
+
+    string fileName;
 
     // void
     // balance( thbDatum & );

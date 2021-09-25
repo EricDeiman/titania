@@ -39,7 +39,7 @@ main( int argc, char **argv ) {
     std::vector< CodeBuffer >vcb;
     vcb.push_back( cb );
 
-    IR ir{ std::move( vcb ) };
+    IR ir{ std::move( vcb ), argv[ 1 ] };
     // ir.mkBasicBlocks();
     //ir.testLocalValueNumbering( "!", "!", std::cout );
     // ir.dumpBasicBlocks( std::cout );

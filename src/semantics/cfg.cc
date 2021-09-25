@@ -17,6 +17,8 @@
 
 
 #include <algorithm>
+#include <fstream>
+#include <iostream>
 #include <regex>
 #include <string>
 
@@ -25,7 +27,8 @@ using namespace std;
 #include "cfg.hh"
 #include "ilocpat.hh"
 
-Cfg::Cfg( CodeBuffer &fnCode ) {
+Cfg::Cfg( CodeBuffer &fnCode, string fName ) {
+    fileName = fName;
     name = fnCode.getName();
     mkBasicBlock( fnCode );
 }
@@ -99,6 +102,104 @@ Cfg::mkBasicBlock( CodeBuffer &code ) {
             checkDataFlow( buffer->at( i ), bb );
         }
     }
+
+    // Calculate the fan-in for each basic block
+    for( auto e : edges ) {
+        auto offset{ blockNames[ e.destination ] };
+        basicBlocks[ offset ].fanIn++;
+    }
+
+    drawBbs();
+
+    findExtendedBasicBlocks();
+
+    drawEbbs();
+}
+
+void
+Cfg::drawBbs() {
+    auto fName{ fileName.substr( 0, fileName.find( '.' ) ) };
+    ofstream out{ fName + ".cfg.dot" };
+
+    out << "digraph " << fName << " {" << endl;
+    out << "\tnode[ shape = box ];" << endl;
+
+    for( auto b : basicBlocks ) {
+        out << "\t\"" << b.name << "\";" << endl;
+    }
+    out << endl;
+
+    for( auto e : edges ) {
+        out << "\t\"" << e.source << "\" -> \"" << e.destination << "\";" << endl;
+    }
+
+    out << "}" << endl;
+}
+
+string
+formatEbb( vector< string > ebb ) {
+    auto buffer{ "("s };
+
+    for( auto i = 0; i < ebb.size() - 1; i++ ) {
+        buffer += ebb[ i ] + ", "s;
+    }
+
+    buffer += ebb[ ebb.size() - 1 ];
+
+    buffer += ")"s;
+
+    return buffer;
+}
+
+void
+Cfg::drawEbbs() {
+    auto fName{ fileName.substr( 0, fileName.find( '.' ) ) };
+    ofstream out{ fName + ".ebbs.dot" };
+
+    out << "digraph " << fName << " {" << endl;
+
+    for( auto ebb : extendedBasicBlocks ) {
+        out << "\t\"" << formatEbb( ebb ) << "\";" << endl;
+    }
+
+    out << "}" << endl;    
+}
+
+void
+Cfg::findExtendedBasicBlocks() {
+    // A leader is a basic block with a fan-in > 1
+    vector< string >leaders;
+
+    for( auto b : basicBlocks ) {
+        if( 1 < b.fanIn ) {
+            leaders.push_back( b.name );
+        }
+    }
+
+    for( auto n : leaders ) {
+        vector< string >ebb;
+        ebb.push_back( n );
+    
+        buildEbb( ebb, n );    
+    
+        extendedBasicBlocks.push_back( move( ebb ) );
+    }  
+}
+
+vector< string > &
+Cfg::buildEbb( vector< string > &ebb, string blockName ) {
+
+    for( auto e : edges ) {
+        if( e.source == blockName ) {
+            auto offset{ blockNames[ e.destination ] };
+            if( basicBlocks[ offset ].fanIn == 1 ) {
+                ebb.push_back( e.destination );
+                buildEbb( ebb, e.destination );
+            }
+        }
+    }
+
+    return ebb;
 }
 
 vector< string >
@@ -112,8 +213,8 @@ Cfg::getJumpTargets( string instruction ) {
             auto pat{ mkRX( { insrC, ccC, srw_, immC, com_, immC } ) };
             smatch mg;
             if( regex_match( instruction, mg, pat ) ) {
-                result.push_back( mg[ 3 ].str() );
-                result.push_back( mg[ 4 ].str() );
+                result.push_back( mg[ 3 ].str().substr( 1 ) );
+                result.push_back( mg[ 4 ].str().substr( 1 ) );
             }
         }
         else {   // jump instruction
@@ -121,7 +222,7 @@ Cfg::getJumpTargets( string instruction ) {
             smatch mg;
 
             if( regex_match( instruction, mg, pat ) ) {
-                result.push_back( mg[ 2 ].str() );
+                result.push_back( mg[ 2 ].str().substr( 1 ) );
             }
         }
     }
