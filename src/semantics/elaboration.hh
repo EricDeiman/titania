@@ -38,7 +38,7 @@ using Any = antlrcpp::Any;
 class elaborationVisitor : public titaniaBaseVisitor {
 public:
 
-    elaborationVisitor( typeVisitor & );
+    elaborationVisitor( typeVisitor &, bool = false, bool = false );
 
     Any
     visitFile( titaniaParser::FileContext* ) override;
@@ -144,6 +144,9 @@ private:
     std::string fnReturnReg;
     bool seeCurrentFnId = false;
     bool inAssignStmnt = false;
+
+    bool lineNo;
+    bool arpOffset;
 };
 
 #endif

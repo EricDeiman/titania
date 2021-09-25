@@ -42,7 +42,7 @@ ir.o : ir.cc ir.hh
 
 ilocpat.o : ilocpat.cc ilocpat.hh
 
-testlvn : testlvn.cc codebuffer.o ir.o cfg.o ilocpat.o
+topt : topt.cc codebuffer.o ir.o cfg.o ilocpat.o
 
 tc : $(OBJS) $(LIBDIR)/libtitaniaParser.a
 	$(CXX) $(CXXFLAGS) $(OBJS) -l titaniaParser -l antlr4-runtime -o $@

@@ -3,7 +3,7 @@ doit
 iloci
 tc
 ti
-testlvn
+topt
 *.out
 *.cache
 ../.cache/

@@ -9,7 +9,7 @@ environment
 1. Run the makefile in the `semantics` directory to build the program executables
    1. The command `tc` will compile a titania file into iloc
    1. The command `ti` will interpret an iloc file
-   1. The command `testlvn` will perform optimizations on an iloc file
+   1. The command `topt` will perform optimizations on an iloc file
 
 # Directories
 The `src` directory holds all the source code for the language.  

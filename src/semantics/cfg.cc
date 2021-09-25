@@ -17,10 +17,12 @@
 
 
 #include <algorithm>
+#include <cstddef>
 #include <fstream>
 #include <iostream>
 #include <regex>
 #include <string>
+#include <unordered_map>
 
 using namespace std;
 
@@ -116,6 +118,16 @@ Cfg::mkBasicBlock( CodeBuffer &code ) {
     drawEbbs();
 }
 
+string
+htmlEncode( string html ) {
+    while( html.find( '>' ) != string::npos ) {
+        auto pos{ html.find( '>' ) };
+        html.replace( pos, 1, "&gt;" );
+    }
+
+    return html;
+}
+
 void
 Cfg::drawBbs() {
     auto fName{ fileName.substr( 0, fileName.find( '.' ) ) };
@@ -124,8 +136,40 @@ Cfg::drawBbs() {
     out << "digraph " << fName << " {" << endl;
     out << "\tnode[ shape = box ];" << endl;
 
+    unordered_map< int, vector< string > > ranks;
+    auto thenPat{ R"(thenBody(\d+))" };
+    auto elsePat{ R"(elseBody(\d+))" };
+    auto thenRx{ regex{ thenPat, regex::optimize } };
+    auto elseRx{ regex{ elsePat, regex::optimize } };
+    smatch mg;
+
     for( auto b : basicBlocks ) {
-        out << "\t\"" << b.name << "\";" << endl;
+        out << "\t\"" << b.name << R"(" [label = <)" << endl;
+        out << R"(<table border="0" cellborder="0">)" << endl;
+
+        for( auto i : b.codeBlock ) {
+            out << R"(<tr><td align="left">)" << htmlEncode( i ) << "</td></tr>" << endl;
+        }
+
+        out << "</table>" << endl;
+        out << ">];" << endl;
+
+        if( regex_match( b.name, mg, thenRx ) ) {
+            ranks[ stoi( mg[ 1 ] ) ].push_back( b.name );
+        }
+
+        if( regex_match( b.name, mg, elseRx ) ) {
+            ranks[ stoi( mg[ 1 ] ) ].push_back( b.name );
+        }
+    }
+    out << endl;
+
+    for( auto p : ranks ) {
+        out << "\t{ rank = same; ";
+        for( auto n : p.second ) {
+            out << "\"" << n << "\"; ";
+        }
+        out << "};" << endl;
     }
     out << endl;
 
@@ -157,6 +201,7 @@ Cfg::drawEbbs() {
     ofstream out{ fName + ".ebbs.dot" };
 
     out << "digraph " << fName << " {" << endl;
+    out << "\tnode[ shape = box ];" << endl;
 
     for( auto ebb : extendedBasicBlocks ) {
         out << "\t\"" << formatEbb( ebb ) << "\";" << endl;

@@ -25,11 +25,14 @@
 #include <string>
 
 
-elaborationVisitor::elaborationVisitor( typeVisitor &type ) {
+elaborationVisitor::elaborationVisitor( typeVisitor &type, bool lineNo, bool arpOffset ) {
     scopes = type.moveScopes();
     symbolTables = type.moveSymbolTables();
 
     cb = &globalCodeBuffer;
+
+    lineNo = lineNo;
+    arpOffset = arpOffset;
 }
 
 Any
@@ -74,11 +77,14 @@ elaborationVisitor::visitIdentifier( titaniaParser::IdentifierContext *ctx ) {
     }
 
     auto idSymbol = lookupId( id );
-    cb->writeCodeBuffer( { "# . . . . . . . .  offset of ", id, " from ARP is ",
-        to_str( idSymbol.second.arpOffset ), " and lexical level is ", 
-        to_str( idSymbol.second.lexicalNest), " (current lexical level is ",
-        to_str( scopes.size() ), ")"
-    } );
+
+    if( arpOffset ) {
+        cb->writeCodeBuffer( { "# . . . . . . . .  offset of ", id, " from ARP is ",
+            to_str( idSymbol.second.arpOffset ), " and lexical level is ", 
+            to_str( idSymbol.second.lexicalNest), " (current lexical level is ",
+            to_str( scopes.size() ), ")"
+        } );
+    }
 
     auto framesBack = scopes.size() - idSymbol.second.lexicalNest;
 
@@ -212,8 +218,10 @@ elaborationVisitor::visitPrefixNegative( titaniaParser::PrefixNegativeContext* c
 
 Any
 elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx ) {
-    cb->writeCodeBuffer( { "# ................ function call on line ", 
-        to_str( ctx->getStart()->getLine() ) } );
+    if( lineNo ) {
+        cb->writeCodeBuffer( { "# ................ function call on line ", 
+            to_str( ctx->getStart()->getLine() ) } );
+    }
 
     mustache passLocalAccessLink{
         {
@@ -506,8 +514,10 @@ elaborationVisitor::visitBoolLit( titaniaParser::BoolLitContext* ctx ) {
 Any 
 elaborationVisitor::visitArithmaticIf( titaniaParser::ArithmaticIfContext *ctx ) {
 
-    cb->writeCodeBuffer( { "# ................ arithmatic if on line ", 
-        to_str( ctx->getStart()->getLine() ) } );
+    if( lineNo ) {
+        cb->writeCodeBuffer( { "# ................ arithmatic if on line ", 
+            to_str( ctx->getStart()->getLine() ) } );
+    }
 
     auto test = static_cast< std::string >( visit( ctx->test ) );
 
@@ -545,8 +555,11 @@ elaborationVisitor::visitArithmaticIf( titaniaParser::ArithmaticIfContext *ctx )
 
 Any
 elaborationVisitor::visitFieldAccess(titaniaParser::FieldAccessContext *ctx ) {
-    cb->writeCodeBuffer( { "# ---------------- Field access on line ", 
-        to_str( ctx->getStart()->getLine() ) } );
+
+    if( lineNo ) {
+        cb->writeCodeBuffer( { "# ---------------- Field access on line ", 
+            to_str( ctx->getStart()->getLine() ) } );
+    }
 
     auto oldAsAddress = asAddress;
     asAddress = true;
@@ -564,9 +577,11 @@ elaborationVisitor::visitFieldAccess(titaniaParser::FieldAccessContext *ctx ) {
         }
     }
 
-    cb->writeCodeBuffer( {  "# ................... looking up field ", fieldName, 
-        " in record ", record.name, " with offset of ", to_str( field.fieldOffset ), 
-        " and size ", to_str( field.sizeInBytes ) } );
+    if( arpOffset ) {
+        cb->writeCodeBuffer( {  "# ................... looking up field ", fieldName, 
+            " in record ", record.name, " with offset of ", to_str( field.fieldOffset ), 
+            " and size ", to_str( field.sizeInBytes ) } );
+    }
 
     auto offset = to_str( field.fieldOffset );
     std::string r_offset;
@@ -601,8 +616,10 @@ elaborationVisitor::visitFieldAccess(titaniaParser::FieldAccessContext *ctx ) {
 
 Any
 elaborationVisitor::visitArrayAccess( titaniaParser::ArrayAccessContext *ctx ) {
-    cb->writeCodeBuffer( { "# ---------------- Array access on line ", 
-        to_str( ctx->getStart()->getLine() ) } );
+    if( lineNo ) {
+        cb->writeCodeBuffer( { "# ---------------- Array access on line ", 
+            to_str( ctx->getStart()->getLine() ) } );
+    }
 
     auto oldAsAddress = asAddress;
     asAddress = true;
@@ -614,8 +631,10 @@ elaborationVisitor::visitArrayAccess( titaniaParser::ArrayAccessContext *ctx ) {
     auto symbols = symbolTables[ ctx ];
     auto arrayBaseType = symbols[ "arrayBaseType" ];
 
-    // base is a register that holds the offset in the ARP of the base of the array
-    cb->writeCodeBuffer( { "# ---------------- base is ", base, " and index is ", index } );
+    if( arpOffset ) {
+        // base is a register that holds the offset in the ARP of the base of the array
+        cb->writeCodeBuffer( { "# ---------------- base is ", base, " and index is ", index } );
+    }
 
     // index is a register that holds an integer indicating the offset into the array to 
     // look.  the actual offset will be the size of the elements of the array times the index
@@ -668,8 +687,10 @@ elaborationVisitor::visitArrayAccess( titaniaParser::ArrayAccessContext *ctx ) {
 Any
 elaborationVisitor::visitAssignment( titaniaParser::AssignmentContext* ctx ) {
 
-    cb->writeCodeBuffer( { "# ................ assignment on line ", 
-        to_str( ctx->getStart()->getLine() ) } );
+    if( lineNo ) {
+        cb->writeCodeBuffer( { "# ................ assignment on line ", 
+            to_str( ctx->getStart()->getLine() ) } );
+    }
 
     auto rvalue = static_cast< std::string >( visit( ctx->rval ) );
 
@@ -763,8 +784,10 @@ elaborationVisitor::visitVarElem( titaniaParser::VarElemContext* ctx ) {
 Any
 elaborationVisitor::visitIfThen( titaniaParser::IfThenContext *ctx ) {
 
-    cb->writeCodeBuffer( { "# ................ if/then/else on line ", 
-        to_str( ctx->getStart()->getLine() ) } );
+    if( lineNo ) {
+        cb->writeCodeBuffer( { "# ................ if/then/else on line ", 
+            to_str( ctx->getStart()->getLine() ) } );
+    }
 
     auto test = static_cast< std::string >( visit( ctx->test ) );
 
@@ -813,8 +836,10 @@ elaborationVisitor::visitIfThen( titaniaParser::IfThenContext *ctx ) {
 Any
 elaborationVisitor::visitWhileDo( titaniaParser::WhileDoContext *ctx ) {
 
-    cb->writeCodeBuffer( { "# ................ while/do on line ", 
-        to_str( ctx->getStart()->getLine() ) } );
+    if( lineNo ) {
+        cb->writeCodeBuffer( { "# ................ while/do on line ", 
+            to_str( ctx->getStart()->getLine() ) } );
+    }
 
     auto labels = cb->makeLabel( { "whileTest", "whileBody", "whileEnd" } );
     auto whileBody = labels[ 1 ];
@@ -857,8 +882,10 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
     CodeBuffer fnCodeBuffer{ currentFnName };
     cb = &fnCodeBuffer;
 
-    cb->writeCodeBuffer( { "# ................ function definition on line ", 
-        to_str( ctx->getStart()->getLine() ) } );
+    if( lineNo ) {
+        cb->writeCodeBuffer( { "# ................ function definition on line ", 
+            to_str( ctx->getStart()->getLine() ) } );
+    }
 
     fnReturnReg = cb->getFreshRegister();
 
