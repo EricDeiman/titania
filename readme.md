@@ -1,10 +1,66 @@
+# Why
+
+I've got some projects that explore the parsing, generating byte codes, and running them 
+with a virtual machine.  Now, I want to learn more about optimizations compilers often 
+perform.  I'm primarily going to follow _Engineering a Compiler, 2/e_ by Cooper and 
+Torrczon.  Since I learn best by building, I'm going to implement an optimizing compiler.
+
+For that, I want a simple procedural language to make it easier to follow writings on the 
+subject.  One of the languages I started out programming in was Pascal, which is 
+relatively straight forward.  I'm familar with other Wirth languages, like Modula-2 and 
+Oberon, so I decided to follow along the path set out in those languages.  When I cook a 
+recipie, I only follow it exactly the first time--after that, I always make changes.  So, 
+for this language, I haven't followed any of the Wirth languages exactly--I've made some 
+changes.
+
+Now, without further ado, introducing...
+
 # Titania
-This is a basic procedural programming language for a testbed as I work through _Engineering a Compiler, 2/e_ by Cooper and Torrczon in 2021.
+Since this language is a follow-up to Oberon, and in the play he's married to Titania,
+that's the name I'll use.  One of the things I liked about Pascal is having sections for 
+various constructs. One of the things I don't like about Pascal is the distinction between
+procedures and functions.  So, Titania has sections and not procedures.
+
+Here's an example of what Titania looks like:
+
+      module example  (* this is a comment *)
+          from   (* Import constructs from other modules *)
+              std use showi 
+
+          type
+              newType = record
+                      foo : integer;  (* semicolons are separators, not terminators *)
+                      bar : string
+                  end;
+
+          const
+              pi : integer = 3 
+
+          function
+              fact( x : integer ) : integer =  
+                  begin
+                      if 2 > x then fact <- 1 else fact <- x * fact( x - 1 ) end
+                  end;
+
+          var
+              tau : integer <- pi * 2
+
+      begin
+
+          showi( fact( 5 ) )
+
+      end
+
+A few other things the novelty budget has been spent on:
+- the assignment operator is spelled `<-`
+- the equality operator is spelled `?=`
+
+The file `ideas.md` has some other notes on the language along with the todo list.
 
 # Building
 - This is being developed on a Linux machine and assumes a Unix-like command line build 
-environment
-1. Run `. tools/ConfigShell.sh` file to set up the environment variables
+environment 
+1. Run `. tools/ConfigShell.sh` file to set up the environment variables 
 1. Run the makefile in the `grammar` directory to build the parser and related files
 1. Run the makefile in the `semantics` directory to build the program executables
    1. The command `tc` will compile a titania file into iloc
@@ -29,7 +85,7 @@ The `src/lib` subdirectory hold a static library for the parser and runtime ANTL
 libraries.  
 
 The `src/semantics` subdirectory holds source to typecheck, generate the ILOC IR, and 
-optimize the code, along with a number of test files.  This is were most of the changes and
-additions are going to happen.
+optimize the code, along with a number of test files.  This is were most of the changes 
+and additions are going to happen.
 
 The `tools` directory holds scripts that are useful for building everything.
