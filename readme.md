@@ -23,6 +23,8 @@ procedures and functions.  So, Titania has sections and not procedures.
 
 Here's an example of what Titania looks like:
 
+```pascal
+
       module example  (* this is a comment *)
           from   (* Import constructs from other modules *)
               std use showi 
@@ -50,6 +52,8 @@ Here's an example of what Titania looks like:
           showi( fact( 5 ) )
 
       end
+
+```
 
 A few other things the novelty budget has been spent on:
 - the assignment operator is spelled `<-`
