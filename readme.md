@@ -1,11 +1,11 @@
 # Why
 
-I've got some projects that explore the parsing, generating byte codes, and running them 
+I've got some projects that explore parsing, generating byte codes, and running them 
 with a virtual machine.  Now, I want to learn more about optimizations compilers often 
 perform.  I'm primarily going to follow _Engineering a Compiler, 2/e_ by Cooper and 
-Torrczon.  Since I learn best by building, I'm going to implement an optimizing compiler.
+Torrczon.  
 
-For that, I want a simple procedural language to make it easier to follow writings on the 
+Since I learn best by building, I'm going to implement an optimizing compiler.  For that, I designed a simple procedural language to make it easier to follow writings on the 
 subject.  One of the languages I started out programming in was Pascal, which is 
 relatively straight forward.  I'm familar with other Wirth languages, like Modula-2 and 
 Oberon, so I decided to follow along the path set out in those languages.  When I cook a 
@@ -16,8 +16,8 @@ changes.
 Now, without further ado, introducing...
 
 # Titania
-Since this language is a follow-up to Oberon, and in the play he's married to Titania,
-that's the name I'll use.  One of the things I liked about Pascal is having sections for 
+Since I consider this language a follow-up to Oberon, and in folklore he's married to Titania,
+that's the name I chose.  One of the things I like about Pascal is having sections for 
 various constructs. One of the things I don't like about Pascal is the distinction between
 procedures and functions.  So, Titania has sections and not procedures.
 
