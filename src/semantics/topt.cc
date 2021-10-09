@@ -21,6 +21,8 @@
 #include <string>
 #include <vector>
 
+using namespace std;
+
 #include "codebuffer.hh"
 #include "ir.hh"
 
@@ -28,7 +30,7 @@ int
 main( int argc, char **argv ) {
 
     CodeBuffer cb{ "!" };
-    std::ifstream is{ argv[ 1 ] };
+    ifstream is{ argv[ 1 ] };
 
     while( !is.eof() ) {
         char buffer[ 1024 ];
@@ -36,15 +38,19 @@ main( int argc, char **argv ) {
         cb.writeCodeBuffer( { buffer } );
     }
 
-    std::vector< CodeBuffer >vcb;
+    vector< CodeBuffer >vcb;
     vcb.push_back( cb );
 
-    IR ir{ std::move( vcb ), argv[ 1 ] };
-    // ir.mkBasicBlocks();
-    //ir.testLocalValueNumbering( "!", "!", std::cout );
-    // ir.dumpBasicBlocks( std::cout );
+    IR ir{ move( vcb ), argv[ 1 ] };
+    
+    ir.doSuperLocalValueNumbering();
 
-    // ir.testTreeHeightBalance( "!", "!", std::cout );
+    string fileName{ argv[ 1 ] };
+    auto baseFileName{ fileName.substr( 0, fileName.find_last_of( "." ) ) };
+    ofstream outFile{ baseFileName + ".slvn.iloc" };
+    ir.dumpCfgBasicBlocks( outFile );
+
+    // ir.testTreeHeightBalance( "!", "!", cout );
 
     return 0;
 }

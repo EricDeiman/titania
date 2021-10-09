@@ -22,8 +22,10 @@
 #include "type.hh"
 
 #include <cassert>
+#include <fstream>
 #include <string>
 
+using namespace std;
 
 elaborationVisitor::elaborationVisitor( typeVisitor &type, bool lineNo, bool arpOffset ) {
     scopes = type.moveScopes();
@@ -54,17 +56,17 @@ elaborationVisitor::visitFile( titaniaParser::FileContext* ctx ) {
     cb->writeCodeBuffer( { "hlt  # end the program" } );
     scopes.pop_back();
 
-    fnCodeBuffers.push_back( std::move( globalCodeBuffer ) );
+    fnCodeBuffers.push_back( move( globalCodeBuffer ) );
 
     return "";
 }
 
 Any
 elaborationVisitor::visitIdentifier( titaniaParser::IdentifierContext *ctx ) {
-    std::string result;
-    std::string id{ ctx->ID()->getText() };
+    string result;
+    string id{ ctx->ID()->getText() };
 
-    std::string reg1;
+    string reg1;
 
     // If we see the current function id as the LHS of an assignment statement, the 
     // statement acts like a return statement
@@ -102,7 +104,7 @@ elaborationVisitor::visitIdentifier( titaniaParser::IdentifierContext *ctx ) {
         result = reg1;
     }
     else {
-        std::string reg2 = cb->getFreshRegister();
+        string reg2 = cb->getFreshRegister();
         cb->writeCodeBuffer( { "load ", reg1, " => ", reg2 } );
         result = reg2;
     }
@@ -112,8 +114,8 @@ elaborationVisitor::visitIdentifier( titaniaParser::IdentifierContext *ctx ) {
 
 Any
 elaborationVisitor::visitNumberLit( titaniaParser::NumberLitContext* ctx ) {
-    std::string result;
-    std::string lit{ ctx->NUMBER()->getText() };
+    string result;
+    string lit{ ctx->NUMBER()->getText() };
 
     if( cb->valuesScopesCount( lit ) > 0 ) {
         result = cb->valuesScopesLookup( lit );
@@ -130,10 +132,10 @@ elaborationVisitor::visitNumberLit( titaniaParser::NumberLitContext* ctx ) {
 
 Any
 elaborationVisitor::visitAddOp( titaniaParser::AddOpContext* ctx ) {
-    auto left = static_cast< std::string >( visit( ctx->left ) );
-    auto right = static_cast< std::string >( visit( ctx->right ) );
+    auto left = static_cast< string >( visit( ctx->left ) );
+    auto right = static_cast< string >( visit( ctx->right ) );
     auto op = ctx->op->getText();
-    std::string result, insr;
+    string result, insr;
 
     switch( op[ 0 ] ) {
         case '+':
@@ -162,10 +164,10 @@ elaborationVisitor::visitAddOp( titaniaParser::AddOpContext* ctx ) {
 
 Any
 elaborationVisitor::visitMultOp( titaniaParser::MultOpContext* ctx ) {
-    auto left = static_cast< std::string >( visit( ctx->left ) );
-    auto right = static_cast< std::string >( visit( ctx->right ) );
+    auto left = static_cast< string >( visit( ctx->left ) );
+    auto right = static_cast< string >( visit( ctx->right ) );
     auto op = ctx->op->getText();
-    std::string result, insr;
+    string result, insr;
 
     switch( op[ 0 ] ) {
         case '*':
@@ -197,8 +199,8 @@ elaborationVisitor::visitMultOp( titaniaParser::MultOpContext* ctx ) {
 
 Any
 elaborationVisitor::visitPrefixNegative( titaniaParser::PrefixNegativeContext* ctx ) {
-    auto expr = static_cast< std::string >( visit( ctx->expression() ) );
-    std::string result;
+    auto expr = static_cast< string >( visit( ctx->expression() ) );
+    string result;
 
     auto key = "-1*" + expr;
     if( memoizeExprs && cb->valuesScopesCount( key ) ) {
@@ -250,7 +252,7 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
         }
     };
 
-    std::vector< std::string >stdLib{ "showi", "showb", "shows" };
+    vector< string >stdLib{ "showi", "showb", "shows" };
 
     auto fnId = ctx->name->getText();
 
@@ -258,9 +260,9 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
     assert( fnSymbol.first );
     auto fnBaseSymbol = lookupId( fnSymbol.second.base );
 
-    std::string fnReg;
+    string fnReg;
 
-    if( std::find( stdLib.begin(), stdLib.end(), fnId ) == stdLib.end() ) {
+    if( find( stdLib.begin(), stdLib.end(), fnId ) == stdLib.end() ) {
         if( memoizeExprs && cb->valuesScopesCount( "@" + fnId ) > 0 ) {
             fnReg = cb->valuesScopesLookup( "@" + fnId );
         }
@@ -304,11 +306,11 @@ elaborationVisitor::visitFunctionCall( titaniaParser::FunctionCallContext* ctx )
     manipulateARP.populate( replaceManipulateARP, *cb );
 
     for( auto x = ctx->args.rbegin(); x != ctx->args.rend(); x++ ) {
-        auto res = static_cast< std::string >( visit( *x ) );
+        auto res = static_cast< string >( visit( *x ) );
         cb->writeCodeBuffer( { "push ", res } );
     }
 
-    if( std::find( stdLib.begin(), stdLib.end(), fnId ) != stdLib.end() ) {
+    if( find( stdLib.begin(), stdLib.end(), fnId ) != stdLib.end() ) {
         // handle the primative functions here 
         cb->writeCodeBuffer( { fnId } );
     }
@@ -340,9 +342,9 @@ elaborationVisitor::visitRecusive( titaniaParser::RecusiveContext* ctx ) {
 
 Any
 elaborationVisitor::visitNotOp( titaniaParser::NotOpContext* ctx ) {
-    auto expr = static_cast< std::string >( visit( ctx->logicExpression() ) );
+    auto expr = static_cast< string >( visit( ctx->logicExpression() ) );
 
-    std::string result;
+    string result;
 
     auto key = "not" + expr;
     if( memoizeExprs && cb->valuesScopesCount( key ) ) {
@@ -389,7 +391,7 @@ elaborationVisitor::visitAndOp( titaniaParser::AndOpContext* ctx ) {
     auto result = cb->getFreshRegister();
 
     dictionary replacements {
-        { "left", static_cast< std::string >( visit( ctx->left ) ) },
+        { "left", static_cast< string >( visit( ctx->left ) ) },
         { "result", result },
         { "r_false", cb->valuesScopesLookup( "false" ) },
         { "cc", cb->getFreshCCRegister() },
@@ -399,7 +401,7 @@ elaborationVisitor::visitAndOp( titaniaParser::AndOpContext* ctx ) {
     
     lhsCode.populate( replacements, *cb );
 
-    replacements[ "right" ] = static_cast< std::string >( visit( ctx->right ) );
+    replacements[ "right" ] = static_cast< string >( visit( ctx->right ) );
 
     rhsCode.populate( replacements, *cb );
 
@@ -429,7 +431,7 @@ elaborationVisitor::visitOrOp( titaniaParser::OrOpContext* ctx ) {
     auto result = cb->getFreshRegister();
 
     dictionary replacements {
-        { "left", static_cast< std::string >( visit( ctx->left ) ) },
+        { "left", static_cast< string >( visit( ctx->left ) ) },
         { "result", result },
         { "r_false", cb->valuesScopesLookup( "false" ) },
         { "cc", cb->getFreshCCRegister() },
@@ -439,7 +441,7 @@ elaborationVisitor::visitOrOp( titaniaParser::OrOpContext* ctx ) {
  
     lhsCode.populate( replacements, *cb );
 
-    replacements[ "right" ] = static_cast< std::string >( visit( ctx->right ) );
+    replacements[ "right" ] = static_cast< string >( visit( ctx->right ) );
 
     rhsCode.populate( replacements, *cb );
 
@@ -448,11 +450,11 @@ elaborationVisitor::visitOrOp( titaniaParser::OrOpContext* ctx ) {
 
 Any
 elaborationVisitor::visitCompOp( titaniaParser::CompOpContext* ctx ) {
-    auto left = static_cast< std::string >( visit( ctx->left ) );
-    auto right = static_cast< std::string >( visit( ctx->right ) );
+    auto left = static_cast< string >( visit( ctx->left ) );
+    auto right = static_cast< string >( visit( ctx->right ) );
     auto op = ctx->op->getText();
 
-    std::string insr;
+    string insr;
 
     if( op == "<" ) {
         insr = "cmplt";
@@ -473,7 +475,7 @@ elaborationVisitor::visitCompOp( titaniaParser::CompOpContext* ctx ) {
         insr = "cmpgt";
     }
 
-    std::string result;
+    string result;
 
     auto key = left + insr + right;
     if( memoizeExprs && cb->valuesScopesCount( key ) ) {
@@ -494,7 +496,7 @@ elaborationVisitor::visitCompOp( titaniaParser::CompOpContext* ctx ) {
 Any
 elaborationVisitor::visitBoolLit( titaniaParser::BoolLitContext* ctx ) {
     auto value = ctx->getText();
-    std::string result;
+    string result;
 
     if( memoizeExprs && cb->valuesScopesCount( value ) > 0 ) {
         result = cb->valuesScopesLookup( value );
@@ -519,7 +521,7 @@ elaborationVisitor::visitArithmaticIf( titaniaParser::ArithmaticIfContext *ctx )
             to_str( ctx->getStart()->getLine() ) } );
     }
 
-    auto test = static_cast< std::string >( visit( ctx->test ) );
+    auto test = static_cast< string >( visit( ctx->test ) );
 
     auto r_false = cb->valuesScopesLookup( "false" );
     auto labels = cb->makeLabel( { "consqExpr", "altrnExpr", "endAIf" } );
@@ -535,14 +537,14 @@ elaborationVisitor::visitArithmaticIf( titaniaParser::ArithmaticIfContext *ctx )
 
     cb->writeCodeBuffer( { consqPart, ":" } );
 
-    auto consqReg = static_cast< std::string >( visit( ctx->consq ) );
+    auto consqReg = static_cast< string >( visit( ctx->consq ) );
     cb->writeCodeBuffer( { "i2i ", consqReg, " => ", result } );
 
     cb->writeCodeBuffer( { "jumpi @", endAIf } );
 
     cb->writeCodeBuffer( { altrnPart, ":" } );
 
-    auto altrnReg = static_cast< std::string >( visit( ctx->altrn ) );
+    auto altrnReg = static_cast< string >( visit( ctx->altrn ) );
     cb->writeCodeBuffer( { "i2i ", altrnReg, " => ", result } );
 
     cb->writeCodeBuffer( { "jumpi @", endAIf } );
@@ -563,7 +565,7 @@ elaborationVisitor::visitFieldAccess(titaniaParser::FieldAccessContext *ctx ) {
 
     auto oldAsAddress = asAddress;
     asAddress = true;
-    auto base = static_cast< std::string >( visit( ctx->base ) );
+    auto base = static_cast< string >( visit( ctx->base ) );
     asAddress = oldAsAddress;
 
     auto symbols = symbolTables[ ctx ];
@@ -584,7 +586,7 @@ elaborationVisitor::visitFieldAccess(titaniaParser::FieldAccessContext *ctx ) {
     }
 
     auto offset = to_str( field.fieldOffset );
-    std::string r_offset;
+    string r_offset;
     if( memoizeExprs && cb->valuesScopesCount( offset ) > 0 ) {
         r_offset = cb->valuesScopesLookup( offset );
     }
@@ -600,7 +602,7 @@ elaborationVisitor::visitFieldAccess(titaniaParser::FieldAccessContext *ctx ) {
     auto fieldLocation = cb->getFreshRegister();
     cb->writeCodeBuffer( { "add ", base, ", ", r_offset, " => ", fieldLocation } );
 
-    std::string result;
+    string result;
 
     if( asAddress ) {
         result = fieldLocation;
@@ -623,10 +625,10 @@ elaborationVisitor::visitArrayAccess( titaniaParser::ArrayAccessContext *ctx ) {
 
     auto oldAsAddress = asAddress;
     asAddress = true;
-    auto base = static_cast< std::string >( visit( ctx->base ) );
+    auto base = static_cast< string >( visit( ctx->base ) );
     asAddress = oldAsAddress;
 
-    auto index = static_cast< std::string >( visit( ctx->index ) );
+    auto index = static_cast< string >( visit( ctx->index ) );
 
     auto symbols = symbolTables[ ctx ];
     auto arrayBaseType = symbols[ "arrayBaseType" ];
@@ -639,7 +641,7 @@ elaborationVisitor::visitArrayAccess( titaniaParser::ArrayAccessContext *ctx ) {
     // index is a register that holds an integer indicating the offset into the array to 
     // look.  the actual offset will be the size of the elements of the array times the index
     auto sizeOf = to_str( arrayBaseType.sizeInBytes );
-    std::string r_sizeOf;
+    string r_sizeOf;
     if( memoizeExprs && cb->valuesScopesCount( sizeOf ) > 0 ) {
         r_sizeOf = cb->valuesScopesLookup( sizeOf );
     }
@@ -652,7 +654,7 @@ elaborationVisitor::visitArrayAccess( titaniaParser::ArrayAccessContext *ctx ) {
         }
     }
 
-    std::string r_offset;
+    string r_offset;
     auto key = index + "mult " + r_sizeOf;
     if( memoizeExprs && cb->valuesScopesCount( key ) ) {
         r_offset = cb->valuesScopesLookup( key );
@@ -669,7 +671,7 @@ elaborationVisitor::visitArrayAccess( titaniaParser::ArrayAccessContext *ctx ) {
     auto arrayLocation = cb->getFreshRegister();
     cb->writeCodeBuffer( { "add ", base, ", ", r_offset, " => ", arrayLocation } );
 
-    std::string result;
+    string result;
 
     if( asAddress ) {
         result = arrayLocation;
@@ -692,12 +694,12 @@ elaborationVisitor::visitAssignment( titaniaParser::AssignmentContext* ctx ) {
             to_str( ctx->getStart()->getLine() ) } );
     }
 
-    auto rvalue = static_cast< std::string >( visit( ctx->rval ) );
+    auto rvalue = static_cast< string >( visit( ctx->rval ) );
 
     auto oldAsAddress = asAddress;
     asAddress = true;
     inAssignStmnt = true;
-    auto lvalue = static_cast< std::string >( visit( ctx->lval ) );
+    auto lvalue = static_cast< string >( visit( ctx->lval ) );
     asAddress = oldAsAddress;
     inAssignStmnt = false;
 
@@ -716,10 +718,10 @@ elaborationVisitor::visitAssignment( titaniaParser::AssignmentContext* ctx ) {
 
 Any
 elaborationVisitor::visitConstElem( titaniaParser::ConstElemContext* ctx ) {
-    auto expr = static_cast< std::string >( visit( ctx->expression() ) );
+    auto expr = static_cast< string >( visit( ctx->expression() ) );
     auto id = ctx->idDecl()->name->getText();
 
-    std::string result;
+    string result;
 
     if( memoizeExprs && cb->valuesScopesCount( id ) > 0 ) {
         result = cb->valuesScopesLookup( id );
@@ -749,7 +751,7 @@ Any
 elaborationVisitor::visitVarElem( titaniaParser::VarElemContext* ctx ) {
     auto id = ctx->idDecl()->name->getText();
 
-    std::string result;
+    string result;
 
     if( memoizeExprs && cb->valuesScopesCount( id ) > 0 ) {
         result = cb->valuesScopesLookup( id );
@@ -763,7 +765,7 @@ elaborationVisitor::visitVarElem( titaniaParser::VarElemContext* ctx ) {
         });
 
         if( ctx->expression() ) {
-            auto expr = static_cast< std::string >( visit( ctx->expression() ) );
+            auto expr = static_cast< string >( visit( ctx->expression() ) );
             
             cb->writeCodeBuffer( { "addi rarp, ", to_str( idSymbol.second.arpOffset ),
                  " => ", reg1, "  # @", id, " = ", to_str( idSymbol.second.arpOffset )
@@ -789,7 +791,7 @@ elaborationVisitor::visitIfThen( titaniaParser::IfThenContext *ctx ) {
             to_str( ctx->getStart()->getLine() ) } );
     }
 
-    auto test = static_cast< std::string >( visit( ctx->test ) );
+    auto test = static_cast< string >( visit( ctx->test ) );
 
     auto r_false = cb->valuesScopesLookup( "false" );
     auto labels = cb->makeLabel( { "thenBody", "elseBody", "endIf" } );
@@ -806,7 +808,7 @@ elaborationVisitor::visitIfThen( titaniaParser::IfThenContext *ctx ) {
 
     cb->writeCodeBuffer( { thenPart, ":" } );
 
-    std::unordered_map< std::string, std::string > valuesMap;
+    unordered_map< string, string > valuesMap;
     cb->valuesScopes.push_back( valuesMap );
 
     visit( ctx->thenBody );
@@ -818,7 +820,7 @@ elaborationVisitor::visitIfThen( titaniaParser::IfThenContext *ctx ) {
     if( hasElseBody ) {
         cb->writeCodeBuffer( { elsePart, ":" } );
 
-        std::unordered_map< std::string, std::string > valuesMap;
+        unordered_map< string, string > valuesMap;
         cb->valuesScopes.push_back( valuesMap );
 
         visit( ctx->elseBody );
@@ -849,13 +851,13 @@ elaborationVisitor::visitWhileDo( titaniaParser::WhileDoContext *ctx ) {
     auto oldMemoize = memoizeExprs;
     memoizeExprs = false;
 
-    auto test1 = static_cast< std::string >( visit( ctx->test ) );
+    auto test1 = static_cast< string >( visit( ctx->test ) );
     auto cc1 = cb->getFreshCCRegister();
     cb->writeCodeBuffer( { "comp ", test1, ", ",  r_false, " => ", cc1 } );
     cb->writeCodeBuffer( { "cbrneq ", cc1, " -> @", whileBody, ", @", whileEnd } ); 
     cb->writeCodeBuffer( { whileBody, ":" } );
 
-    std::unordered_map< std::string, std::string > valuesMap;
+    unordered_map< string, string > valuesMap;
     cb->valuesScopes.push_back( valuesMap );
     memoizeExprs = true;
 
@@ -864,7 +866,7 @@ elaborationVisitor::visitWhileDo( titaniaParser::WhileDoContext *ctx ) {
     memoizeExprs = false;
     cb->valuesScopes.pop_back();
 
-    auto test2 = static_cast< std::string >( visit( ctx->test ) );
+    auto test2 = static_cast< string >( visit( ctx->test ) );
     auto cc2 = cb->getFreshCCRegister();
     cb->writeCodeBuffer( { "comp ", test2, ", ",  r_false, " => ", cc2 } );
     cb->writeCodeBuffer( { "cbrneq ", cc2, " -> @", whileBody, ", @", whileEnd } ); 
@@ -942,22 +944,22 @@ elaborationVisitor::visitFunctionDefinition( titaniaParser::FunctionDefinitionCo
     scopes.pop_back();
 
     cb = &globalCodeBuffer;
-    fnCodeBuffers.push_back( std::move( fnCodeBuffer ) );
+    fnCodeBuffers.push_back( move( fnCodeBuffer ) );
 
     return "0";
 }
 
 // -------------------------------------------------------------------------------------
 
-std::vector< CodeBuffer >&&
+vector< CodeBuffer >&&
 elaborationVisitor::getCodeBuffers() {
-    return std::move( fnCodeBuffers );
+    return move( fnCodeBuffers );
 }
 
-std::ostream&
-elaborationVisitor::dumpCodeBuffers( std::ostream &os ) {
+ostream&
+elaborationVisitor::dumpCodeBuffers( ostream &os ) {
 
-    std::sort( fnCodeBuffers.begin(), fnCodeBuffers.end(), 
+    sort( fnCodeBuffers.begin(), fnCodeBuffers.end(), 
         []( auto a, auto b ){ return a.getName() < b.getName(); } );
 
     for( auto cb : fnCodeBuffers ) {
@@ -968,9 +970,9 @@ elaborationVisitor::dumpCodeBuffers( std::ostream &os ) {
 }
 
 
-std::pair< bool, Symbol>
-elaborationVisitor::lookupId( std::string id ) {
-    std::pair< bool, Symbol > result;
+pair< bool, Symbol>
+elaborationVisitor::lookupId( string id ) {
+    pair< bool, Symbol > result;
 
     result.first = false;
 
@@ -986,9 +988,9 @@ elaborationVisitor::lookupId( std::string id ) {
     return result;
 }
 
-std::string
+string
 elaborationVisitor::to_str( size_t i ) {
-    return std::to_string( i );
+    return to_string( i );
 }
 
 // --------------------------------------------------------------------------------------
@@ -1000,15 +1002,16 @@ main( int argc, char** argv ) {
 
     for( auto i = 1; i < argc; i++ ) {
 
-        std::string arg{ argv[  1 ] };
+        string arg{ argv[  1 ] };
 
-        std::cout << "typechecking file " << argv[ i ] << std::endl;
+        string baseFileName{ argv[ i ] };
+        cout << "typechecking file " << baseFileName << endl;
 
-        std::vector< CodeBuffer > ir;
+        vector< CodeBuffer > ir;
 
         // put these in a block to manage memory
         {
-            std::ifstream file{ argv[ i ] };
+            ifstream file{ argv[ i ] };
             ANTLRInputStream input( file );
             titaniaLexer lexer( &input );
             CommonTokenStream tokens( &lexer );
@@ -1021,28 +1024,30 @@ main( int argc, char** argv ) {
             typeVisitor typecheck;
             typecheck.visit( tree );
 
-            // typecheck.dumpSymbols( std::cout );
+            // typecheck.dumpSymbols( cout );
 
             if( typecheck.errorCount() == 0 ) {
-                std::cout << "elaborating " << std::endl;
+                cout << "elaborating " << endl;
      
                 elaborationVisitor irGen{ typecheck };
                 irGen.visit( tree );
      
-                std::string baseFileName{ argv[ i ] };
-                std::ofstream outFile{ baseFileName + ".iloc"s };
+                ofstream outFile{ baseFileName + ".iloc"s };
                 irGen.dumpCodeBuffers( outFile );
     
                 ir = irGen.getCodeBuffers(); 
             }
         }
 
-        IR opt{ std::move( ir ), argv[ 1 ] };
-        // opt.mkBasicBlocks();
-        // opt.dumpBasicBlocks( std::cout );
-        // opt.testLocalValueNumbering( "id", "id", std::cout );
+        IR opt{ move( ir ), argv[ 1 ] };
 
-        std::cout << std::endl;
+        opt.doLocalValueNumbering();
+
+        auto irFileName{ baseFileName + ".lvn.iloc"s };
+        ofstream outFile{ irFileName };
+        opt.dumpCfgBasicBlocks( outFile );
+
+        cout << endl;
 
     }
 

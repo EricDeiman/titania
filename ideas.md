@@ -149,12 +149,6 @@ another turing complete language.
 - [ ] post order numbering
 - [ ] reverse post order numbering
 - [ ] reverse cfg
-## Data flow analysis
-- [x] upward exposed names
-- [ ] killed names
-- [ ] live out
-- [ ] dominance
-- [ ] reaching definitions
 ## Local (in one basic block)
 - [x] local value numbering
 - [x] local constant folding
@@ -165,3 +159,9 @@ another turing complete language.
 - [ ] loop unrolling
 ## Global (in an entire function)
 ## Interprocedural (in the entire program)
+## Data flow analysis
+- [x] upward exposed names
+- [ ] killed names
+- [ ] live out
+- [ ] dominance
+- [ ] reaching definitions

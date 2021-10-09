@@ -42,6 +42,12 @@ public:
 
     vector< BasicBlock > basicBlocks;
 
+    // each inner vector holds one extended basic block (EBB).  The outter vector holds 
+    // all EBBs.  The first element of the inner EBB is a basic block that has a fan-in of 
+    // more than one.  Each EBB will contain one or more basic blocks.
+    vector< vector< string > >
+    extendedBasicBlocks;
+
     int
     getOffset( string name );
 
@@ -81,12 +87,6 @@ private:
 
     void
     findExtendedBasicBlocks();
-
-    // each inner vector holds one extended basic block (EBB).  The outter vector holds 
-    // all EBBs.  The first element of the inner EBB is a basic block that has a fan-in of 
-    // more than one.  Each EBB will contain one or more basic blocks.
-    vector< vector< string > >
-    extendedBasicBlocks;
 
     vector< string > &
     buildEbb( vector< string > &, string );

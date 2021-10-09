@@ -88,21 +88,18 @@ private:
 
 class IR {
 public:
-    IR( vector< CodeBuffer >&& s, string fName ) : fnBuffers( s ), fileName( fName) {
+    IR( vector< CodeBuffer >&& s, string fName ) : fnBuffers( s ), fileName( fName ) {
         for( auto fn : fnBuffers ) {
             Cfg cfg{ fn, fileName };
             cfgs.push_back( move( cfg ) );
         }
     }
 
-    LvnMeta
-    localValueNumbering( BasicBlock & );
-
-    ostream &
-    testLocalValueNumbering( string, string, ostream & );
-
     ostream&
     dumpBasicBlocks( ostream &os );
+
+    ostream&
+    dumpCfgBasicBlocks( ostream &os );
 
     bool
     isCommumative( string );
@@ -111,7 +108,13 @@ public:
     operatorPrecedence( string );
 
     void
-    treeHeightBalance( BasicBlock & );
+    doLocalValueNumbering();
+
+    void
+    doSuperLocalValueNumbering();
+
+    // void
+    // treeHeightBalance( BasicBlock & );
 
     // ostream &
     // testTreeHeightBalance( string, string, ostream & );
@@ -135,8 +138,17 @@ private:
         "multi",
     };
 
-    unordered_map< string, vector< size_t > >
-    buildUses( BasicBlock & );
+    LvnMeta
+    localValueNumbering( BasicBlock & );
+
+    void
+    superLocalValueNumbering( Cfg &, vector< string > & );
+
+    LvnMeta
+    localValueNumberingWithData( BasicBlock &, LvnMeta );
+
+    void
+    recursiveSLVN( Cfg &, string, LvnMeta );
 
     unordered_map< string, int >rank;
 

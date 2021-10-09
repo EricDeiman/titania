@@ -1,0 +1,64 @@
+(*
+
+Test file checking super local value numbering.  Based on example on page 438 of
+Engineering a Compiler, 2/e by Cooper and Torczon
+
+*)
+
+module irtestslvn
+
+    var 
+        a : integer <- 1 ;
+        b : integer <- 2 ;
+        c : integer <- 3 ;
+        d : integer <- 4 ;
+        e : integer ;
+        f : integer ;
+        m : integer ;
+        n : integer ;
+        p : integer ;
+        q : integer ;
+        r : integer ;
+        s : integer ;
+        t : integer ;
+        u : integer ;
+        v : integer ;
+        w : integer ;
+        x : integer ;
+        y : integer ;
+        z : integer
+
+    begin
+        (* B0 *)
+        while ( a < 10 ) do
+            m <- a + b ;
+            n <- a + b ;
+            if a > b then
+                (* B1 *)
+                p <- c + d ;
+                r <- c + d ;
+            else
+                (* B2 *)
+                q <- a + b ;
+                r <- c + d ;
+                if a > b then
+                    (* B3 *)
+                    e <- b + 18 ;
+                    s <- a + b ;
+                    u <- e + f ;
+                else
+                    (* B4 *)
+                    e <- a + 17 ;
+                    t <- c + d ;
+                    u <- e + f ;
+                end
+                (* B5 *)
+                v <- a + b ;
+                w <- c + d ;
+                x <- e + f ;
+            end
+            (* B6 *)
+            y <- a + b ;
+            z <- c + d ;
+        end
+    end

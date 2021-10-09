@@ -5,7 +5,8 @@ with a virtual machine.  Now, I want to learn more about optimizations compilers
 perform.  I'm primarily going to follow _Engineering a Compiler, 2/e_ by Cooper and 
 Torrczon.  
 
-Since I learn best by building, I'm going to implement an optimizing compiler.  For that, I designed a simple procedural language to make it easier to follow writings on the 
+Since I learn best by building, I'm going to implement an optimizing compiler.  For that, 
+I designed a simple procedural language to make it easier to follow writings on the 
 subject.  One of the languages I started out programming in was Pascal, which is 
 relatively straight forward.  I'm familar with other Wirth languages, like Modula-2 and 
 Oberon, so I decided to follow along the path set out in those languages.  When I cook a 
@@ -23,36 +24,34 @@ procedures and functions.  So, Titania has sections and not procedures.
 
 Here's an example of what Titania looks like:
 
-```pascal
+```
+module example  (* this is a comment *)
+    from   (* Import constructs from other modules *)
+        std use showi 
 
-      module example  (* this is a comment *)
-          from   (* Import constructs from other modules *)
-              std use showi 
+    type
+        newType = record
+                foo : integer;  (* semicolons are separators, not terminators *)
+                bar : string
+            end;
 
-          type
-              newType = record
-                      foo : integer;  (* semicolons are separators, not terminators *)
-                      bar : string
-                  end;
+    const
+        pi : integer = 3 
 
-          const
-              pi : integer = 3 
+    function
+        fact( x : integer ) : integer =  
+            begin
+                if 2 > x then fact <- 1 else fact <- x * fact( x - 1 ) end
+            end;
 
-          function
-              fact( x : integer ) : integer =  
-                  begin
-                      if 2 > x then fact <- 1 else fact <- x * fact( x - 1 ) end
-                  end;
+    var
+        tau : integer <- pi * 2
 
-          var
-              tau : integer <- pi * 2
+begin
 
-      begin
+    showi( fact( 5 ) )
 
-          showi( fact( 5 ) )
-
-      end
-
+end
 ```
 
 A few other things the novelty budget has been spent on:
